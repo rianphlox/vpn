@@ -59,12 +59,33 @@ class ServerCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    server.city,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        server.city,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (server.uptime > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2A2A3E),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Uptime: ${_formatUptime(server.uptime)}',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -116,5 +137,14 @@ class ServerCard extends StatelessWidget {
     if (latency < 50) return const Color(0xFF4CAF50);
     if (latency < 100) return const Color(0xFFFFA726);
     return const Color(0xFFEF5350);
+  }
+
+  String _formatUptime(double uptime) {
+    if (uptime < 24) {
+      return '${uptime.toStringAsFixed(1)}h';
+    } else {
+      final days = (uptime / 24).floor();
+      return '${days}d';
+    }
   }
 }

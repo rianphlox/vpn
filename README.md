@@ -1,16 +1,19 @@
-# vpn
 
-A new Flutter project.
 
-## Getting Started
+### 🧠 VPNService Overview
 
-This project is a starting point for a Flutter application.
+The `VPNService` class is the core controller of the app’s VPN functionality.
+It manages all background operations — from fetching available VPN servers to establishing secure OpenVPN connections via native Android/iOS integration.
 
-A few resources to get you started if this is your first Flutter project:
+**Key features include:**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+* **Server Management:** Fetches public VPN servers from [VPNGate](https://www.vpngate.net/) and loads predefined premium VPNBook servers.
+* **Connection Control:** Initiates, monitors, and disconnects VPN sessions using native OpenVPN configurations.
+* **Status Tracking:** Keeps real-time connection status and duration updates within the Flutter app.
+* **Permission Handling:** Automatically requests and handles VPN permission responses from the OS.
+* **Persistence:** Stores the last connected server in `SharedPreferences` for seamless reconnection on app restart.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+In short, `VPNService` acts as the central brain of the VPN app — ensuring smooth server selection, connection management, and reliable background operation.
+
+---
+

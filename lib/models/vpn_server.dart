@@ -7,6 +7,9 @@ class VPNServer {
   final int signalStrength;
   final String ovpnConfig;
   final String ip;
+  final String hostname;
+  final double uptime;
+  final String countryShort;
 
   VPNServer({
     required this.name,
@@ -17,6 +20,9 @@ class VPNServer {
     required this.signalStrength,
     required this.ovpnConfig,
     required this.ip,
+    this.hostname = '',
+    this.uptime = 0.0,
+    this.countryShort = '',
   });
 
   factory VPNServer.fromJson(Map<String, dynamic> json) {
@@ -29,6 +35,29 @@ class VPNServer {
       signalStrength: int.tryParse(json['Score']?.toString() ?? '0') ?? 0,
       ovpnConfig: json['OpenVPN_ConfigData_Base64'] ?? '',
       ip: json['IP'] ?? '',
+      hostname: json['HostName'] ?? '',
+      uptime: double.tryParse(json['Uptime']?.toString() ?? '0') ?? 0.0,
+      countryShort: json['CountryShort'] ?? '',
+    );
+  }
+
+  factory VPNServer.fromVPNGateCSV(List<String> csvFields) {
+    if (csvFields.length < 15) {
+      throw ArgumentError('Invalid CSV data: insufficient fields');
+    }
+
+    return VPNServer(
+      hostname: csvFields[0],
+      ip: csvFields[1],
+      latency: int.tryParse(csvFields[3]) ?? 0,
+      signalStrength: (int.tryParse(csvFields[2]) ?? 0) ~/ 1000000,
+      country: csvFields[6],
+      countryShort: csvFields[6],
+      city: csvFields[5],
+      flagCode: csvFields[6].toLowerCase(),
+      uptime: double.tryParse(csvFields[7]) ?? 0.0,
+      ovpnConfig: csvFields[14],
+      name: csvFields[0],
     );
   }
 

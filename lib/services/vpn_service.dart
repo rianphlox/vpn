@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:csv/csv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vpn_server.dart';
 import '../models/vpn_status.dart';
 import '../models/vpnbook_servers.dart';
@@ -12,12 +14,13 @@ class VPNService extends ChangeNotifier {
   factory VPNService() => _instance;
   VPNService._internal() {
     _setupMethodChannel();
+    _loadLastConnectedServer();
   }
 
   static const MethodChannel _vpnChannel = MethodChannel('com.example.vpn/vpn');
 
   VPNStatus _status = VPNStatus(state: VPNConnectionState.disconnected);
-  List<VPNServer> _servers = [];
+  final List<VPNServer> _servers = [];
   VPNServer? _currentServer;
   Timer? _connectionTimer;
   bool _vpnPermissionGranted = false;
@@ -95,47 +98,54 @@ class VPNService extends ChangeNotifier {
 
   Future<void> fetchVPNGateServers() async {
     try {
+      debugPrint('Fetching VPN Gate servers...');
       final response = await http.get(
         Uri.parse('https://www.vpngate.net/api/iphone/'),
         headers: {'User-Agent': 'VPNGate API Client'},
       );
 
       if (response.statusCode == 200) {
-        final lines = response.body.split('\n');
-        _servers.clear();
+        final csvData = response.body;
+        final lines = csvData.split('\n');
+
+        final vpnGateServers = <VPNServer>[];
 
         for (int i = 2; i < lines.length; i++) {
           final line = lines[i].trim();
-          if (line.isEmpty) continue;
+          if (line.isEmpty || line.startsWith('*') || line.startsWith('#')) continue;
 
-          final parts = line.split(',');
-          if (parts.length >= 14) {
-            try {
-              final server = VPNServer(
-                name: parts[0],
-                country: parts[6],
-                city: parts[5],
-                flagCode: parts[6].toLowerCase(),
-                latency: int.tryParse(parts[3]) ?? 0,
-                signalStrength: (int.tryParse(parts[2]) ?? 0) ~/ 1000000,
-                ovpnConfig: parts[14],
-                ip: parts[1],
+          try {
+            final csvFields = const CsvToListConverter().convert(line)[0];
+            if (csvFields.length >= 15) {
+              final server = VPNServer.fromVPNGateCSV(
+                csvFields.map((field) => field.toString()).toList()
               );
 
-              if (server.ovpnConfig.isNotEmpty && server.latency > 0) {
-                _servers.add(server);
+              if (server.ovpnConfig.isNotEmpty &&
+                  server.latency > 0 &&
+                  server.latency < 1000 &&
+                  server.uptime > 0) {
+                vpnGateServers.add(server);
               }
-            } catch (e) {
-              debugPrint('Error parsing server data: $e');
             }
+          } catch (e) {
+            debugPrint('Error parsing VPN Gate server: $e');
           }
         }
 
+        _servers.clear();
+        _loadPredefinedServers();
+        _servers.addAll(vpnGateServers);
         _servers.sort((a, b) => a.latency.compareTo(b.latency));
+
+        debugPrint('Loaded ${vpnGateServers.length} VPN Gate servers');
         notifyListeners();
+      } else {
+        debugPrint('Failed to fetch VPN Gate servers: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Error fetching VPNGate servers: $e');
+      _loadPredefinedServers();
     }
   }
 
@@ -236,8 +246,65 @@ class VPNService extends ChangeNotifier {
 
   void setCurrentServer(VPNServer server) {
     _currentServer = server;
+    _saveLastConnectedServer(server);
     notifyListeners();
   }
+
+  Future<void> _saveLastConnectedServer(VPNServer server) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serverData = {
+        'name': server.name,
+        'country': server.country,
+        'city': server.city,
+        'flagCode': server.flagCode,
+        'latency': server.latency,
+        'signalStrength': server.signalStrength,
+        'ovpnConfig': server.ovpnConfig,
+        'ip': server.ip,
+        'hostname': server.hostname,
+        'uptime': server.uptime,
+        'countryShort': server.countryShort,
+      };
+      await prefs.setString('last_connected_server', jsonEncode(serverData));
+    } catch (e) {
+      debugPrint('Error saving last connected server: $e');
+    }
+  }
+
+  Future<void> _loadLastConnectedServer() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serverJson = prefs.getString('last_connected_server');
+      if (serverJson != null) {
+        final serverData = jsonDecode(serverJson) as Map<String, dynamic>;
+        _currentServer = VPNServer(
+          name: serverData['name'] ?? '',
+          country: serverData['country'] ?? '',
+          city: serverData['city'] ?? '',
+          flagCode: serverData['flagCode'] ?? '',
+          latency: serverData['latency'] ?? 0,
+          signalStrength: serverData['signalStrength'] ?? 0,
+          ovpnConfig: serverData['ovpnConfig'] ?? '',
+          ip: serverData['ip'] ?? '',
+          hostname: serverData['hostname'] ?? '',
+          uptime: serverData['uptime']?.toDouble() ?? 0.0,
+          countryShort: serverData['countryShort'] ?? '',
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading last connected server: $e');
+    }
+  }
+
+  Future<void> reconnectToLastServer() async {
+    if (_currentServer != null) {
+      await connectToVPNGate(_currentServer!);
+    }
+  }
+
+  bool get hasServers => _servers.isNotEmpty;
 
   @override
   void dispose() {

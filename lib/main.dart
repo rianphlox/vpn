@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
-import 'screens/location_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/upgrade_screen.dart';
 import 'services/vpn_service.dart';

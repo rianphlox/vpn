@@ -15,6 +15,7 @@ class LocationScreen extends StatefulWidget {
 class _LocationScreenState extends State<LocationScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<VPNServer> _filteredServers = [];
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -107,24 +108,55 @@ class _LocationScreenState extends State<LocationScreen> {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF2A2A3E)),
-            ),
-            child: Consumer<VPNService>(
-              builder: (context, vpnService, child) {
-                return Text(
-                  '${vpnService.servers.length} servers',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A2E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF2A2A3E)),
+                ),
+                child: Consumer<VPNService>(
+                  builder: (context, vpnService, child) {
+                    return Text(
+                      '${vpnService.servers.length} servers',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _isRefreshing ? null : _refreshServers,
+                child: Container(
+                  width: 40,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF2A2A3E)),
                   ),
-                );
-              },
-            ),
+                  child: _isRefreshing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Color(0xFF4FC3F7)),
+                          ),
+                        )
+                      : const Icon(
+                          CupertinoIcons.refresh,
+                          color: Colors.white70,
+                          size: 18,
+                        ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -241,5 +273,42 @@ class _LocationScreenState extends State<LocationScreen> {
   void _selectServer(VPNService vpnService, VPNServer server) {
     vpnService.setCurrentServer(server);
     Navigator.pop(context);
+  }
+
+  Future<void> _refreshServers() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      final vpnService = Provider.of<VPNService>(context, listen: false);
+      await vpnService.fetchVPNGateServers();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Servers refreshed successfully'),
+            backgroundColor: Color(0xFF4CAF50),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh servers: $e'),
+            backgroundColor: const Color(0xFFEF5350),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 }
