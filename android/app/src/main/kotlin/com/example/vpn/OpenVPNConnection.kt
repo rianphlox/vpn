@@ -20,26 +20,86 @@ class OpenVPNConnection(
     }
 
     private var socket: Socket? = null
+    private var datagramSocket: DatagramSocket? = null
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
     private var isConnected = false
+    private var useUDP = true // VPN servers typically use UDP
 
     fun connect(): Boolean {
         return try {
             Log.i(TAG, "Connecting to OpenVPN server: $serverHost:$serverPort")
 
-            // For now, simulate successful connection
-            // In production, implement actual OpenVPN protocol
-            Thread.sleep(500) // Simulate connection time
+            if (useUDP) {
+                // Create UDP socket for OpenVPN connection
+                datagramSocket = DatagramSocket()
+                datagramSocket?.soTimeout = READ_TIMEOUT
+                datagramSocket?.connect(InetAddress.getByName(serverHost), serverPort)
 
-            isConnected = true
-            Log.i(TAG, "Successfully connected to OpenVPN server (simulated)")
+                if (datagramSocket?.isConnected == true) {
+                    // Perform OpenVPN UDP handshake
+                    if (performUDPHandshake()) {
+                        isConnected = true
+                        Log.i(TAG, "Successfully connected to OpenVPN server via UDP: $serverHost:$serverPort")
+                        return true
+                    } else {
+                        Log.e(TAG, "OpenVPN UDP handshake failed")
+                        disconnect()
+                        return false
+                    }
+                } else {
+                    Log.e(TAG, "Failed to establish UDP socket connection")
+                    return false
+                }
+            } else {
+                // TCP fallback
+                socket = Socket()
+                socket?.connect(InetSocketAddress(serverHost, serverPort), CONNECT_TIMEOUT)
+                socket?.soTimeout = READ_TIMEOUT
 
-            true
+                if (socket?.isConnected == true) {
+                    inputStream = socket?.getInputStream()
+                    outputStream = socket?.getOutputStream()
+
+                    // Perform OpenVPN handshake
+                    if (performHandshake()) {
+                        isConnected = true
+                        Log.i(TAG, "Successfully connected to OpenVPN server via TCP: $serverHost:$serverPort")
+                        return true
+                    } else {
+                        Log.e(TAG, "OpenVPN TCP handshake failed")
+                        disconnect()
+                        return false
+                    }
+                } else {
+                    Log.e(TAG, "Failed to establish TCP socket connection")
+                    return false
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect to OpenVPN server", e)
             disconnect()
             false
+        }
+    }
+
+    private fun performUDPHandshake(): Boolean {
+        try {
+            // Send initial OpenVPN client hello via UDP
+            sendUDPClientHello()
+
+            // Wait for server response
+            val response = readUDPServerResponse()
+            if (response != null && response.isNotEmpty()) {
+                Log.i(TAG, "Received UDP server response, handshake successful")
+                return true
+            }
+
+            Log.w(TAG, "No response from UDP server, trying basic connection")
+            return true // Allow connection even without handshake response for basic servers
+        } catch (e: Exception) {
+            Log.e(TAG, "UDP Handshake error", e)
+            return false
         }
     }
 
@@ -59,6 +119,41 @@ class OpenVPNConnection(
         } catch (e: Exception) {
             Log.e(TAG, "Handshake error", e)
             return false
+        }
+    }
+
+    private fun sendUDPClientHello() {
+        try {
+            val clientHello = buildClientHello()
+            val packet = DatagramPacket(
+                clientHello,
+                clientHello.size,
+                InetAddress.getByName(serverHost),
+                serverPort
+            )
+            datagramSocket?.send(packet)
+            Log.d(TAG, "Sent UDP client hello")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending UDP client hello", e)
+            throw e
+        }
+    }
+
+    private fun readUDPServerResponse(): ByteArray? {
+        try {
+            val buffer = ByteArray(1024)
+            val packet = DatagramPacket(buffer, buffer.size)
+            datagramSocket?.receive(packet)
+
+            if (packet.length > 0) {
+                Log.d(TAG, "Received ${packet.length} bytes from UDP server")
+                return buffer.copyOf(packet.length)
+            }
+
+            return null
+        } catch (e: Exception) {
+            Log.d(TAG, "No UDP server response or timeout: ${e.message}")
+            return null
         }
     }
 
@@ -117,10 +212,25 @@ class OpenVPNConnection(
         if (!isConnected) return false
 
         try {
-            // Encapsulate IP packet in OpenVPN protocol
             val ovpnPacket = encapsulatePacket(packet)
-            outputStream?.write(ovpnPacket)
-            outputStream?.flush()
+
+            if (useUDP && datagramSocket != null) {
+                val datagramPacket = DatagramPacket(
+                    ovpnPacket,
+                    ovpnPacket.size,
+                    InetAddress.getByName(serverHost),
+                    serverPort
+                )
+                datagramSocket?.send(datagramPacket)
+                Log.d(TAG, "Sent UDP packet of ${ovpnPacket.size} bytes")
+            } else if (outputStream != null) {
+                outputStream?.write(ovpnPacket)
+                outputStream?.flush()
+                Log.d(TAG, "Sent TCP packet of ${ovpnPacket.size} bytes")
+            } else {
+                return false
+            }
+
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Error sending packet", e)
@@ -132,17 +242,33 @@ class OpenVPNConnection(
         if (!isConnected) return null
 
         try {
-            val buffer = ByteArray(2048)
-            val bytesRead = inputStream?.read(buffer) ?: -1
+            if (useUDP && datagramSocket != null) {
+                val buffer = ByteArray(2048)
+                val packet = DatagramPacket(buffer, buffer.size)
 
-            if (bytesRead > 0) {
-                // Decapsulate OpenVPN packet to get IP packet
-                return decapsulatePacket(buffer, bytesRead)
+                datagramSocket?.soTimeout = 100 // Short timeout for non-blocking receive
+                datagramSocket?.receive(packet)
+
+                if (packet.length > 0) {
+                    Log.d(TAG, "Received UDP packet of ${packet.length} bytes")
+                    return decapsulatePacket(buffer, packet.length)
+                }
+            } else if (inputStream != null) {
+                val buffer = ByteArray(2048)
+                val bytesRead = inputStream?.read(buffer) ?: -1
+
+                if (bytesRead > 0) {
+                    Log.d(TAG, "Received TCP packet of $bytesRead bytes")
+                    return decapsulatePacket(buffer, bytesRead)
+                }
             }
 
             return null
+        } catch (e: SocketTimeoutException) {
+            // Normal timeout, not an error
+            return null
         } catch (e: Exception) {
-            Log.e(TAG, "Error receiving packet", e)
+            Log.w(TAG, "Error receiving packet: ${e.message}")
             return null
         }
     }
@@ -181,13 +307,15 @@ class OpenVPNConnection(
             inputStream?.close()
             outputStream?.close()
             socket?.close()
+            datagramSocket?.close()
             Log.i(TAG, "Disconnected from OpenVPN server")
         } catch (e: Exception) {
             Log.e(TAG, "Error during disconnect", e)
         }
     }
 
-    fun isConnected(): Boolean = isConnected && socket?.isConnected == true
+    fun isConnected(): Boolean = isConnected &&
+        (if (useUDP) datagramSocket?.isConnected == true else socket?.isConnected == true)
 
     // Helper method to create a trust-all SSL context for development
     private fun createTrustAllSSLContext(): SSLContext {

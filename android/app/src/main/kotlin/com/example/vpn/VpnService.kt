@@ -26,6 +26,7 @@ class VpnService : VpnService(), Runnable {
     private val isConnected = AtomicBoolean(false)
     private var proxySocket: Socket? = null
     private var openVPNConnection: OpenVPNConnection? = null
+    private var packetReceiverThread: Thread? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return when (intent?.action) {
@@ -125,6 +126,10 @@ class VpnService : VpnService(), Runnable {
                 // Test if the VPN interface is still valid and connection succeeded
                 if (vpnInterface != null && isConnected.get() && connected) {
                     Log.i(TAG, "Successfully connected to OpenVPN server: $serverHost:$serverPort")
+
+                    // Start packet receiver thread to handle incoming packets from VPN server
+                    startPacketReceiver()
+
                     sendConnectionStatus(true, "Connected to $serverHost")
                 } else {
                     Log.e(TAG, "OpenVPN connection failed or VPN interface lost")
@@ -149,6 +154,9 @@ class VpnService : VpnService(), Runnable {
             // Stop VPN thread first
             vpnThread?.interrupt()
 
+            // Stop packet receiver thread
+            packetReceiverThread?.interrupt()
+
             // Close VPN interface
             vpnInterface?.close()
 
@@ -168,6 +176,7 @@ class VpnService : VpnService(), Runnable {
             openVPNConnection = null
             proxySocket = null
             vpnThread = null
+            packetReceiverThread = null
             stopSelf()
         }
     }
@@ -331,29 +340,18 @@ class VpnService : VpnService(), Runnable {
                 val packetToSend = packetData.copyOf(length)
 
                 if (openVPNConnection?.sendPacket(packetToSend) == true) {
-                    // Try to receive response
-                    val response = openVPNConnection?.receivePacket()
-
-                    if (response != null) {
-                        vpnOutput.write(response)
-                        vpnOutput.flush()
-                        Log.d(TAG, "Routed packet through OpenVPN server")
-                    } else {
-                        // Create fallback response if no response received
-                        createSimulatedResponse(packetData, length, vpnOutput)
-                    }
+                    Log.d(TAG, "Packet sent through OpenVPN server")
+                    // For real VPN implementation, responses will come asynchronously
+                    // through the VPN tunnel, not through this method
                 } else {
                     Log.w(TAG, "Failed to send packet through OpenVPN")
-                    createSimulatedResponse(packetData, length, vpnOutput)
                 }
             } else {
-                Log.w(TAG, "OpenVPN connection not established")
-                createSimulatedResponse(packetData, length, vpnOutput)
+                Log.w(TAG, "OpenVPN connection not established, dropping packet")
             }
 
         } catch (e: Exception) {
             Log.w(TAG, "Error routing through proxy: ${e.message}")
-            createSimulatedResponse(packetData, length, vpnOutput)
         }
     }
 
@@ -388,6 +386,42 @@ class VpnService : VpnService(), Runnable {
         } catch (e: Exception) {
             Log.w(TAG, "Error creating simulated response: ${e.message}")
         }
+    }
+
+    private fun startPacketReceiver() {
+        packetReceiverThread = Thread({
+            try {
+                val vpnOutput = FileOutputStream(vpnInterface?.fileDescriptor)
+
+                while (isConnected.get() && !Thread.currentThread().isInterrupted) {
+                    try {
+                        // Receive packets from OpenVPN server
+                        val receivedPacket = openVPNConnection?.receivePacket()
+
+                        if (receivedPacket != null) {
+                            // Write received packet back to VPN interface
+                            vpnOutput.write(receivedPacket)
+                            vpnOutput.flush()
+                            Log.d(TAG, "Received and forwarded packet from VPN server")
+                        }
+
+                        Thread.sleep(10) // Small delay to prevent excessive CPU usage
+                    } catch (e: Exception) {
+                        if (isConnected.get()) {
+                            Log.w(TAG, "Error in packet receiver: ${e.message}")
+                        }
+                        Thread.sleep(100) // Longer delay on error
+                    }
+                }
+
+                vpnOutput.close()
+            } catch (e: Exception) {
+                Log.e(TAG, "Packet receiver thread error", e)
+            }
+        }, "PacketReceiverThread")
+
+        packetReceiverThread?.start()
+        Log.i(TAG, "Packet receiver thread started")
     }
 
     private fun sendConnectionStatus(connected: Boolean, message: String) {
