@@ -116,22 +116,35 @@ Required Android permissions:
 ### Project Structure
 ```
 lib/
-├── main.dart                 # App entry point with dark theme and localization
-├── models/                   # Data models (VPN servers, status, VPNBook servers)
-├── screens/                  # UI screens (Home, Location selection, Network Test, Settings)
-│   ├── home_screen.dart      # Main screen with connection status and controls
-│   ├── network_test_screen.dart  # Shows real IP, location, ISP info
-│   └── location_screen.dart  # VPN server selection
-├── services/                 # Core services
-│   ├── vpn_service.dart      # Main VPN connection management
-│   └── proxy_service.dart    # NEW: HTTP proxy routing for real IP changes
-└── widgets/                  # UI components (status indicators, buttons, cards)
+├── main.dart                 # [App entry point with dark theme, localization setup, and MaterialApp configuration]
+├── models/                   # [Data models and structures]
+│   ├── vpn_server.dart       # [VPN server model with connection details and parsing from VPNGate/VPNBook APIs]
+│   ├── vpn_status.dart       # [Connection status enum and duration tracking for VPN states]
+│   └── vpnbook_servers.dart  # [Predefined premium VPNBook server configurations with credentials]
+├── screens/                  # [User interface screens]
+│   ├── home_screen.dart      # [Main dashboard with connection button, status indicator, and server selection]
+│   ├── location_screen.dart  # [Server list with country flags, latency, and connection options]
+│   ├── network_test_screen.dart  # [Real-time IP detection showing actual location and ISP when VPN active]
+│   └── settings_screen.dart  # [App settings including language selection and preferences]
+├── services/                 # [Core business logic services]
+│   ├── vpn_service.dart      # [Main VPN controller managing connections, server fetching, and status updates]
+│   ├── proxy_service.dart    # [HTTP proxy routing through real servers by location for actual IP changes]
+│   ├── settings_service.dart # [SharedPreferences wrapper for app settings and user preferences]
+│   └── theme_service.dart    # [Theme management and dark/light mode configuration]
+├── l10n/                     # [Internationalization and localization files]
+│   ├── app_localizations.dart     # [Base localization delegate and abstract class for translations]
+│   ├── app_localizations_en.dart  # [English UI text translations for all app strings]
+│   ├── app_localizations_es.dart  # [Spanish UI text translations for all app strings]
+│   └── app_localizations_de.dart  # [German UI text translations for all app strings]
+└── widgets/                  # [Reusable UI components]
+    ├── status_indicator.dart # [Animated connection status with color transitions and progress indicators]
+    └── server_card.dart      # [Server list item with flag, name, latency, and connection button]
 
 android/
 └── app/src/main/kotlin/com/example/vpn/
-    ├── MainActivity.kt       # Flutter activity
-    ├── VpnService.kt        # VPN service implementation
-    └── OpenVPNConnection.kt # OpenVPN protocol handler
+    ├── MainActivity.kt       # [Flutter activity bridge for method channel communication]
+    ├── VpnService.kt        # [Android VPN service with packet routing, OpenVPN integration, and tunnel management]
+    └── OpenVPNConnection.kt # [OpenVPN protocol handler for UDP/TCP connections and authentication]
 ```
 
 ### Building
