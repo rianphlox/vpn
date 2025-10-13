@@ -56,8 +56,8 @@ class VpnService : VpnService(), Runnable {
 
     private fun connect(serverConfig: String, serverHost: String, serverPort: Int, username: String, password: String) {
         if (isConnected.get()) {
-            Log.w(TAG, "VPN already connected")
-            sendConnectionStatus(false, "VPN already connected")
+            Log.i(TAG, "VPN already connected - maintaining connection")
+            sendConnectionStatus(true, "Connected • VPN Active")
             return
         }
 
@@ -138,6 +138,9 @@ class VpnService : VpnService(), Runnable {
         Thread {
             try {
                 Log.i(TAG, "Attempting to connect to OpenVPN server: $serverHost:$serverPort with user: $username")
+
+                // Update status to show authenticating
+                sendConnectionStatus(false, "Authenticating with $serverHost...")
 
                 // Initialize OpenVPN connection
                 openVPNConnection = OpenVPNConnection(serverHost, serverPort, username, password)

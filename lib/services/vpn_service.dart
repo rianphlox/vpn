@@ -48,10 +48,17 @@ class VPNService extends ChangeNotifier {
             _updateStatus(VPNConnectionState.connected);
             _startConnectionTimer();
           } else {
-            _updateStatus(VPNConnectionState.disconnected);
-            _stopConnectionTimer();
-            if (_status.state == VPNConnectionState.disconnecting) {
-              _currentServer = null;
+            // Parse the message to determine the correct state
+            if (message.contains('Connecting')) {
+              _updateStatus(VPNConnectionState.connecting);
+            } else if (message.contains('Authenticating')) {
+              _updateStatus(VPNConnectionState.authenticating);
+            } else {
+              _updateStatus(VPNConnectionState.disconnected);
+              _stopConnectionTimer();
+              if (_status.state == VPNConnectionState.disconnecting) {
+                _currentServer = null;
+              }
             }
           }
 
