@@ -340,7 +340,7 @@ class VpnService : VpnService(), Runnable {
             }
             1 -> { // ICMP
                 Log.d(TAG, "Routing ICMP packet to $destAddress through VPN tunnel")
-                handleICMPDirectly(packetData, destAddress, vpnOutput)
+                handleICMPDirectly(packetData, length, destAddress, vpnOutput)
             }
             else -> {
                 Log.d(TAG, "Routing protocol $protocol to $destAddress through VPN tunnel")
@@ -427,7 +427,10 @@ class VpnService : VpnService(), Runnable {
                     if (openVPNConnection != null && openVPNConnection!!.isConnected()) {
                         // Send packet through the OpenVPN tunnel
                         Log.d(TAG, "Routing packet through OpenVPN tunnel")
-                        openVPNConnection!!.sendPacket(packetData, length)
+                        // Extract payload and send through OpenVPN connection
+                        val payload = ByteArray(length)
+                        System.arraycopy(packetData, 0, payload, 0, length)
+                        openVPNConnection!!.sendPacket(payload)
                     } else {
                         // If OpenVPN tunnel is not available, use HTTP proxy routing
                         Log.d(TAG, "OpenVPN tunnel unavailable, using HTTP proxy")
@@ -557,8 +560,8 @@ class VpnService : VpnService(), Runnable {
             // TCP Header (simplified)
             buffer.putShort(80.toShort()) // Source Port
             buffer.putShort(0x1234.toShort()) // Destination Port
-            buffer.putInt(0x12345678) // Sequence Number
-            buffer.putInt(0x87654321) // Acknowledgment Number
+            buffer.putInt(0x12345678.toInt()) // Sequence Number
+            buffer.putInt(0x87654321.toInt()) // Acknowledgment Number
             buffer.putShort(0x5018.toShort()) // Data Offset + Flags (PSH, ACK)
             buffer.putShort(0x2000.toShort()) // Window Size
             buffer.putShort(0x0000.toShort()) // Checksum
@@ -1348,6 +1351,9 @@ class VpnService : VpnService(), Runnable {
                 // Could add more locations later:
                 // UK: Pair("uk-proxy.hide.me", 8080)
                 // Germany: Pair("de-proxy.hide.me", 8080)
+
+                // Default fallback case
+                else -> Pair("proxy.hide.me", 8080)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error selecting proxy server: ${e.message}")
