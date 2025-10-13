@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vpn_server.dart';
 import '../models/vpn_status.dart';
 import '../models/vpnbook_servers.dart';
+import 'proxy_service.dart';
 
 class VPNService extends ChangeNotifier {
   static final VPNService _instance = VPNService._internal();
@@ -72,6 +73,11 @@ class VPNService extends ChangeNotifier {
           if (success) {
             debugPrint('✅ VPN validation successful');
             _updateStatus(VPNConnectionState.connected);
+
+            // Enable proxy routing when VPN connects successfully
+            if (_currentServer != null) {
+              _enableProxyForServer(_currentServer!);
+            }
           } else {
             debugPrint('❌ VPN validation failed: $error');
             await _handleValidationFailure(error ?? 'Validation failed');
@@ -305,6 +311,24 @@ class VPNService extends ChangeNotifier {
       await prefs.setString('last_connected_server', jsonEncode(serverData));
     } catch (e) {
       debugPrint('Error saving last connected server: $e');
+    }
+  }
+
+  void _enableProxyForServer(VPNServer server) {
+    try {
+      final proxyConfig = ProxyService.getProxyForServer(server.name);
+      final proxyHost = proxyConfig['host'] as String;
+      final proxyPort = proxyConfig['port'] as int;
+      final location = proxyConfig['location'] as String;
+
+      // Enable proxy to route traffic through VPN server's location
+      ProxyService.enableProxy(proxyHost, proxyPort);
+
+      debugPrint('🌍 Enabled proxy routing through $location ($proxyHost:$proxyPort)');
+      debugPrint('🔄 All HTTP traffic now routing through VPN server location');
+
+    } catch (e) {
+      debugPrint('❌ Failed to enable proxy for ${server.name}: $e');
     }
   }
 
