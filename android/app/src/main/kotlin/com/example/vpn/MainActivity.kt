@@ -85,9 +85,15 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        instance = this
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(vpnStatusReceiver)
+        instance = null
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -104,5 +110,10 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val VPN_PREPARE_REQUEST = 100
+        private var instance: MainActivity? = null
+
+        fun invokeMethod(method: String, arguments: Any?) {
+            instance?.methodChannel?.invokeMethod(method, arguments)
+        }
     }
 }

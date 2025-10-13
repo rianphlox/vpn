@@ -8,6 +8,7 @@ import '../widgets/status_indicator.dart';
 import '../widgets/power_button.dart';
 import '../widgets/server_card.dart';
 import 'location_screen.dart';
+import 'network_test_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -103,11 +104,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         IconButton(
           icon: const Icon(
-            CupertinoIcons.question_circle,
+            CupertinoIcons.info_circle,
             color: Colors.white70,
           ),
           onPressed: () {
-            // Support action
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NetworkTestScreen(),
+              ),
+            );
           },
         ),
       ],

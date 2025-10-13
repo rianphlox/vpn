@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -24,6 +25,12 @@ class VPNService extends ChangeNotifier {
   VPNServer? _currentServer;
   Timer? _connectionTimer;
   bool _vpnPermissionGranted = false;
+
+  // Auto-retry logic
+  int _currentServerIndex = 0;
+  int _retryAttempts = 0;
+  final int _maxRetryAttempts = 3;
+  final List<String> _failedServers = [];
 
   VPNStatus get status => _status;
   List<VPNServer> get servers => _servers;
@@ -51,6 +58,19 @@ class VPNService extends ChangeNotifier {
           debugPrint('VPN Status: $message');
           break;
 
+        case 'vpnValidationResult':
+          final success = call.arguments['success'] as bool;
+          final error = call.arguments['error'] as String?;
+
+          if (success) {
+            debugPrint('✅ VPN validation successful');
+            _updateStatus(VPNConnectionState.connected);
+          } else {
+            debugPrint('❌ VPN validation failed: $error');
+            await _handleValidationFailure(error ?? 'Validation failed');
+          }
+          break;
+
         case 'vpnPermissionGranted':
           final granted = call.arguments as bool;
           _vpnPermissionGranted = granted;
@@ -67,10 +87,10 @@ class VPNService extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
-      // Load predefined premium servers first
+      // Load real VPNBook servers
       _loadPredefinedServers();
 
-      // Then try to fetch additional VPNGate servers
+      // Fetch additional VPNGate servers (real public servers)
       await fetchVPNGateServers();
       await _prepareVpn();
     } catch (e) {
@@ -121,10 +141,12 @@ class VPNService extends ChangeNotifier {
                 csvFields.map((field) => field.toString()).toList()
               );
 
+              // Enhanced filtering for better servers
               if (server.ovpnConfig.isNotEmpty &&
                   server.latency > 0 &&
-                  server.latency < 1000 &&
-                  server.uptime > 0) {
+                  server.latency < 500 &&  // Lower latency requirement
+                  server.uptime > 24 &&    // At least 24 hours uptime
+                  server.signalStrength > 50) {  // Decent signal strength
                 vpnGateServers.add(server);
               }
             }
@@ -133,12 +155,15 @@ class VPNService extends ChangeNotifier {
           }
         }
 
+        // Test and validate servers before adding
+        final validatedServers = await _validateServers(vpnGateServers);
+
         _servers.clear();
         _loadPredefinedServers();
-        _servers.addAll(vpnGateServers);
+        _servers.addAll(validatedServers);
         _servers.sort((a, b) => a.latency.compareTo(b.latency));
 
-        debugPrint('Loaded ${vpnGateServers.length} VPN Gate servers');
+        debugPrint('Loaded ${validatedServers.length} validated VPN Gate servers');
         notifyListeners();
       } else {
         debugPrint('Failed to fetch VPN Gate servers: ${response.statusCode}');
@@ -305,6 +330,125 @@ class VPNService extends ChangeNotifier {
   }
 
   bool get hasServers => _servers.isNotEmpty;
+
+  Future<List<VPNServer>> _validateServers(List<VPNServer> servers) async {
+    final validServers = <VPNServer>[];
+
+    // Test up to 10 servers to avoid long delays
+    final serversToTest = servers.take(10).toList();
+
+    for (final server in serversToTest) {
+      try {
+        final isValid = await _testServerConnectivity(server);
+        if (isValid) {
+          validServers.add(server);
+          debugPrint('✅ Server validated: ${server.name} (${server.ip})');
+        } else {
+          debugPrint('❌ Server failed validation: ${server.name} (${server.ip})');
+        }
+      } catch (e) {
+        debugPrint('❌ Server validation error: ${server.name} - $e');
+      }
+    }
+
+    return validServers;
+  }
+
+  Future<bool> _testServerConnectivity(VPNServer server) async {
+    try {
+      // Quick socket test to see if server is reachable
+      final socket = await Socket.connect(InternetAddress(server.ip), 1194)
+          .timeout(const Duration(seconds: 5));
+      socket.destroy();
+
+      // Additional validation: check if OVPN config is properly formatted
+      if (server.ovpnConfig.isEmpty) return false;
+
+      final decodedConfig = utf8.decode(base64.decode(server.ovpnConfig));
+      if (!decodedConfig.contains('remote') || !decodedConfig.contains('dev tun')) {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _handleValidationFailure(String error) async {
+    debugPrint('🔄 Handling validation failure: $error');
+
+    // Mark current server as failed
+    if (_currentServer != null) {
+      _failedServers.add(_currentServer!.ip);
+      debugPrint('❌ Marked server ${_currentServer!.name} (${_currentServer!.ip}) as failed');
+    }
+
+    _retryAttempts++;
+
+    if (_retryAttempts <= _maxRetryAttempts) {
+      debugPrint('🔄 Attempting retry $_retryAttempts/$_maxRetryAttempts');
+      _updateStatus(VPNConnectionState.connecting, 'Trying next server...');
+
+      // Find next working server
+      final nextServer = _findNextWorkingServer();
+      if (nextServer != null) {
+        debugPrint('🎯 Trying next server: ${nextServer.name} (${nextServer.ip})');
+        await Future.delayed(const Duration(seconds: 2));
+        await connectToVPNGate(nextServer);
+      } else {
+        debugPrint('💥 No more servers to try');
+        _updateStatus(VPNConnectionState.error, 'No working servers available');
+        _resetRetryState();
+      }
+    } else {
+      debugPrint('💥 Max retry attempts reached');
+      _updateStatus(VPNConnectionState.error, 'All servers failed validation');
+      _resetRetryState();
+    }
+  }
+
+  VPNServer? _findNextWorkingServer() {
+    final availableServers = _servers.where((server) =>
+      !_failedServers.contains(server.ip)
+    ).toList();
+
+    if (availableServers.isEmpty) {
+      debugPrint('📊 No more available servers (${_failedServers.length} failed)');
+      return null;
+    }
+
+    // Sort by quality (latency, uptime, signal strength)
+    availableServers.sort((a, b) {
+      final scoreA = _calculateServerScore(a);
+      final scoreB = _calculateServerScore(b);
+      return scoreB.compareTo(scoreA); // Higher score is better
+    });
+
+    debugPrint('📊 Found ${availableServers.length} available servers');
+    return availableServers.first;
+  }
+
+  double _calculateServerScore(VPNServer server) {
+    // Score based on: low latency + high uptime + high signal strength
+    final latencyScore = server.latency > 0 ? (1000 - server.latency) / 1000 : 0;
+    final uptimeScore = server.uptime / 100; // Normalize to 0-1
+    final signalScore = server.signalStrength / 100; // Normalize to 0-1
+
+    return (latencyScore * 0.4) + (uptimeScore * 0.3) + (signalScore * 0.3);
+  }
+
+  void _resetRetryState() {
+    _retryAttempts = 0;
+    _currentServerIndex = 0;
+    _failedServers.clear();
+  }
+
+  Future<void> connectToVPNGateWithValidation(VPNServer server) async {
+    debugPrint('🚀 Starting validated connection to ${server.name}');
+    _resetRetryState();
+    await connectToVPNGate(server);
+  }
 
   @override
   void dispose() {

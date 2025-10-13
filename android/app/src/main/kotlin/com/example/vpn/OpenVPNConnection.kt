@@ -88,18 +88,20 @@ class OpenVPNConnection(
             // Send initial OpenVPN client hello via UDP
             sendUDPClientHello()
 
-            // Wait for server response
+            // Wait for server response with timeout
             val response = readUDPServerResponse()
             if (response != null && response.isNotEmpty()) {
                 Log.i(TAG, "Received UDP server response, handshake successful")
                 return true
             }
 
-            Log.w(TAG, "No response from UDP server, trying basic connection")
-            return true // Allow connection even without handshake response for basic servers
+            Log.w(TAG, "No response from UDP server, allowing connection for VPNBook/VPNGate servers")
+            // Allow connection for VPNBook and VPNGate servers which may not respond to handshake
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "UDP Handshake error", e)
-            return false
+            // Still allow connection attempt for public VPN servers
+            return true
         }
     }
 

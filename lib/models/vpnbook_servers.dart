@@ -96,50 +96,16 @@ hTobb/WAAcA75GKmU4jn5Ln2
 
   static List<VPNServer> getPredefinedServers() {
     return [
-      // VPNBook UK Server
+      // VPNBook UK Server - Real working server
       VPNServer(
         name: 'vpnbook-uk205-tcp80',
         country: 'United Kingdom',
         city: 'London',
         flagCode: 'gb',
-        latency: 35, // Estimated latency for UK server
-        signalStrength: 95, // High signal strength for premium server
+        latency: 35,
+        signalStrength: 95,
         ovpnConfig: base64.encode(_vpnBookUKConfig.codeUnits),
         ip: '145.239.252.205',
-      ),
-
-      // Additional premium servers can be added here
-      VPNServer(
-        name: 'premium-us-east',
-        country: 'United States',
-        city: 'New York',
-        flagCode: 'us',
-        latency: 85,
-        signalStrength: 90,
-        ovpnConfig: base64.encode(_vpnBookUKConfig.codeUnits), // Using same config for demo
-        ip: '198.51.100.1',
-      ),
-
-      VPNServer(
-        name: 'premium-de-frankfurt',
-        country: 'Germany',
-        city: 'Frankfurt',
-        flagCode: 'de',
-        latency: 25,
-        signalStrength: 98,
-        ovpnConfig: base64.encode(_vpnBookUKConfig.codeUnits), // Using same config for demo
-        ip: '203.0.113.1',
-      ),
-
-      VPNServer(
-        name: 'premium-sg-singapore',
-        country: 'Singapore',
-        city: 'Singapore',
-        flagCode: 'sg',
-        latency: 120,
-        signalStrength: 88,
-        ovpnConfig: base64.encode(_vpnBookUKConfig.codeUnits), // Using same config for demo
-        ip: '192.0.2.1',
       ),
     ];
   }

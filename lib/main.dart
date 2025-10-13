@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/upgrade_screen.dart';
+import 'screens/location_screen.dart';
 import 'services/vpn_service.dart';
+import 'services/theme_service.dart';
+import 'services/settings_service.dart';
+import 'l10n/app_localizations.dart';
 
 void main() {
   runApp(RocketVPNApp());
@@ -13,53 +17,35 @@ void main() {
 class RocketVPNApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => VPNService(),
-      child: MaterialApp(
-        title: 'Rocket VPN',
-        theme: _buildDarkTheme(),
-        home: MainNavigationScreen(),
-        debugShowCheckedModeBanner: false,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => VPNService()),
+        ChangeNotifierProvider(create: (context) => ThemeService()),
+        ChangeNotifierProvider(create: (context) => SettingsService()),
+      ],
+      child: Consumer2<ThemeService, SettingsService>(
+        builder: (context, themeService, settingsService, child) {
+          return MaterialApp(
+            title: 'VPN App',
+            theme: themeService.darkTheme,
+            darkTheme: themeService.darkTheme,
+            themeMode: ThemeMode.dark,
+            locale: settingsService.currentLocale,
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MainNavigationScreen(),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }
 
-  ThemeData _buildDarkTheme() {
-    return ThemeData(
-      brightness: Brightness.dark,
-      primarySwatch: Colors.blue,
-      primaryColor: const Color(0xFF1A1A2E),
-      scaffoldBackgroundColor: const Color(0xFF16213E),
-      cardColor: const Color(0xFF1A1A2E),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1A1A2E),
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
-        titleTextStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        displayMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        bodyLarge: TextStyle(color: Colors.white70),
-        bodyMedium: TextStyle(color: Colors.white70),
-        bodySmall: TextStyle(color: Colors.white54),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0F3460),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-      iconTheme: const IconThemeData(color: Colors.white70),
-    );
-  }
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -72,32 +58,41 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const UpgradeScreen(),
+    const LocationScreen(),
     const SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
-              Color(0xFF1A1A2E),
+            colors: isDark ? [
+              const Color(0xFF16213E),
+              const Color(0xFF0F3460),
+              const Color(0xFF1A1A2E),
+            ] : [
+              const Color(0xFFF1F3F4),
+              const Color(0xFFE8EAF6),
+              const Color(0xFFF8F9FA),
             ],
           ),
         ),
         child: _screens[_currentIndex],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A2E),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
           border: Border(
-            top: BorderSide(color: Color(0xFF2A2A3E), width: 1),
+            top: BorderSide(
+              color: isDark ? const Color(0xFF2A2A3E) : Colors.grey[300]!,
+              width: 1,
+            ),
           ),
         ),
         child: BottomNavigationBar(
@@ -105,7 +100,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           onTap: (index) => setState(() => _currentIndex = index),
           backgroundColor: Colors.transparent,
           selectedItemColor: const Color(0xFF4FC3F7),
-          unselectedItemColor: Colors.white54,
+          unselectedItemColor: isDark ? Colors.white54 : Colors.grey[600],
           type: BottomNavigationBarType.fixed,
           elevation: 0,
           items: const [
@@ -114,8 +109,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               label: 'Network',
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.star),
-              label: 'Upgrade',
+              icon: Icon(CupertinoIcons.location),
+              label: 'Locations',
             ),
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.settings),
