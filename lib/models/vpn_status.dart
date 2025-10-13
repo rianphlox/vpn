@@ -1,6 +1,7 @@
 enum VPNConnectionState {
   disconnected,
   connecting,
+  authenticating,
   connected,
   disconnecting,
   error,
@@ -19,6 +20,7 @@ class VPNStatus {
 
   bool get isConnected => state == VPNConnectionState.connected;
   bool get isConnecting => state == VPNConnectionState.connecting;
+  bool get isAuthenticating => state == VPNConnectionState.authenticating;
   bool get isDisconnected => state == VPNConnectionState.disconnected;
   bool get isDisconnecting => state == VPNConnectionState.disconnecting;
   bool get hasError => state == VPNConnectionState.error;
@@ -29,6 +31,8 @@ class VPNStatus {
         return 'Connected';
       case VPNConnectionState.connecting:
         return 'Connecting...';
+      case VPNConnectionState.authenticating:
+        return 'Authenticating';
       case VPNConnectionState.disconnected:
         return 'Disconnected';
       case VPNConnectionState.disconnecting:

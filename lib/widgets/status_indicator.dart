@@ -39,7 +39,7 @@ class StatusIndicator extends StatelessWidget {
               color: _getStatusColor(),
             ),
           ),
-          if (status.isConnecting || status.isDisconnecting) ...[
+          if (status.isConnecting || status.isDisconnecting || status.isAuthenticating) ...[
             const SizedBox(width: 8),
             SizedBox(
               width: 16,
@@ -58,14 +58,16 @@ class StatusIndicator extends StatelessWidget {
   Color _getStatusColor() {
     switch (status.state) {
       case VPNConnectionState.connected:
-        return const Color(0xFF4CAF50);
+        return const Color(0xFF4CAF50); // Green
       case VPNConnectionState.connecting:
       case VPNConnectionState.disconnecting:
-        return const Color(0xFF4FC3F7);
+        return const Color(0xFF4FC3F7); // Blue
+      case VPNConnectionState.authenticating:
+        return const Color(0xFFFFB74D); // Yellow/Orange
       case VPNConnectionState.disconnected:
-        return const Color(0xFFFFA726);
+        return const Color(0xFFEF5350); // Red
       case VPNConnectionState.error:
-        return const Color(0xFFEF5350);
+        return const Color(0xFFEF5350); // Red
     }
   }
 }

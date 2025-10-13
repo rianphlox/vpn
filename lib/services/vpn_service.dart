@@ -187,6 +187,8 @@ class VPNService extends ChangeNotifier {
         }
       }
 
+      // Show authenticating status when starting connection
+      _updateStatus(VPNConnectionState.authenticating);
       await _connectToNativeVpn(server);
     } catch (e) {
       _updateStatus(VPNConnectionState.error, e.toString());
@@ -217,6 +219,8 @@ class VPNService extends ChangeNotifier {
         debugPrint('Using VPNGate server: ${server.name}');
       }
 
+      debugPrint('Authenticating with VPN server: ${server.name} (${server.ip}:$port)');
+
       await _vpnChannel.invokeMethod('connectVpn', {
         'serverConfig': decodedConfig,
         'serverHost': server.ip,
@@ -225,7 +229,7 @@ class VPNService extends ChangeNotifier {
         'password': password,
       });
 
-      debugPrint('Connecting to VPN server: ${server.name} (${server.ip}:$port)');
+      debugPrint('Connection attempt started for VPN server: ${server.name}');
     } catch (e) {
       _updateStatus(VPNConnectionState.error, 'Failed to connect: ${e.toString()}');
     }
