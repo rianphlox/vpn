@@ -36,16 +36,22 @@ class VPNService extends ChangeNotifier {
 
   /// Initialize OpenVPN Flutter and load Japan VPN server
   void _initializeOpenVPN() {
-    _openVPN = OpenVPN(
-      onVpnStatusChanged: (data) {
-        debugPrint('OpenVPN Status: ${data.toString()}');
-        _handleVPNStatusChange(data);
-      },
-      onVpnStageChanged: (data, raw) {
-        debugPrint('OpenVPN Stage: $data - Raw: $raw');
-        _handleVPNStageChange(data, raw);
-      },
-    );
+    try {
+      _openVPN = OpenVPN(
+        onVpnStatusChanged: (data) {
+          debugPrint('OpenVPN Status: ${data.toString()}');
+          _handleVPNStatusChange(data);
+        },
+        onVpnStageChanged: (data, raw) {
+          debugPrint('OpenVPN Stage: $data - Raw: $raw');
+          _handleVPNStageChange(data, raw);
+        },
+      );
+
+      debugPrint('OpenVPN instance created successfully');
+    } catch (e) {
+      debugPrint('Error initializing OpenVPN: $e');
+    }
 
     // Load the Japan VPN server
     _loadJapanVPNServer();
@@ -135,9 +141,9 @@ class VPNService extends ChangeNotifier {
 
       // Load credentials from assets
       final credentials = await rootBundle.loadString('assets/vpn/jpn_vpn_credentials.txt');
-      final credentialLines = credentials.trim().split('\\n');
-      final username = credentialLines.isNotEmpty ? credentialLines[0] : 'vpn';
-      final password = credentialLines.length > 1 ? credentialLines[1] : 'vpn';
+      final credentialLines = credentials.trim().split('\n');
+      final username = credentialLines.isNotEmpty ? credentialLines[0].trim() : 'vpn';
+      final password = credentialLines.length > 1 ? credentialLines[1].trim() : 'vpn';
 
       debugPrint('Connecting to Japan VPN server...');
       debugPrint('Username: $username');
@@ -185,7 +191,12 @@ class VPNService extends ChangeNotifier {
   /// Initialize the VPN service (called from main)
   Future<void> initialize() async {
     try {
-      // OpenVPN Flutter handles permissions internally
+      // Initialize OpenVPN with proper configuration
+      await _openVPN.initialize(
+        groupIdentifier: "group.com.example.vpn",
+        providerBundleIdentifier: "com.example.vpn.OpenVPNProvider",
+        localizedDescription: "Japan VPN Connection",
+      );
       debugPrint('VPN service initialized with Japan VPN server');
     } catch (e) {
       debugPrint('Error initializing VPN service: $e');
