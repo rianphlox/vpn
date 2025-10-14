@@ -157,19 +157,24 @@ class VPNService extends ChangeNotifier {
 
       debugPrint('Connecting to Japan VPN server...');
       debugPrint('Username: $username');
+      debugPrint('Password: $password');
 
       // Show authenticating status
       _updateStatus(VPNConnectionState.authenticating);
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Start VPN connection
+      // Use the simplest connection method with separate username/password
+      debugPrint('Starting connection with:');
+      debugPrint('Server: ${japanServer.name}');
+      debugPrint('Config lines: ${ovpnConfig.split('\\n').length}');
+
+      // Start VPN connection with username and password parameters
       await _openVPN.connect(
         ovpnConfig,
         japanServer.name,
         username: username,
         password: password,
-        bypassPackages: [], // Optional: apps to bypass VPN
-        certIsRequired: false, // Set based on your OVPN config
+        certIsRequired: false,
       );
 
       debugPrint('VPN connection initiated successfully');
@@ -211,12 +216,7 @@ class VPNService extends ChangeNotifier {
   /// Initialize the VPN service (called from main)
   Future<void> initialize() async {
     try {
-      // Initialize OpenVPN with proper configuration
-      await _openVPN.initialize(
-        groupIdentifier: "group.com.example.vpn",
-        providerBundleIdentifier: "com.example.vpn.OpenVPNProvider",
-        localizedDescription: "Japan VPN Connection",
-      );
+      // Skip complex initialization - let openvpn_flutter handle it
       debugPrint('VPN service initialized with Japan VPN server');
     } catch (e) {
       debugPrint('Error initializing VPN service: $e');
