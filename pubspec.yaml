@@ -37,6 +37,7 @@ flutter:
   assets:
     - assets/icon/app_icon.png
     - assets/vpn/jpn_vpn_tcp_fixed.ovpn  # Japan VPN configuration file
+    - assets/vpn/jpn_vpn_minimal.ovpn    # Minimal Japan VPN config for testing
     - assets/vpn/jpn_vpn_credentials.txt  # Japan VPN credentials
 
 # Configuration for flutter_launcher_icons

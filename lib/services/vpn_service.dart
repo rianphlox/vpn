@@ -146,7 +146,7 @@ class VPNService extends ChangeNotifier {
       _updateStatus(VPNConnectionState.connecting);
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Load OVPN configuration from assets
+      // Load OVPN configuration from assets (now fixed - removed data-ciphers directive)
       final ovpnConfig = await rootBundle.loadString('assets/vpn/jpn_vpn_tcp_fixed.ovpn');
 
       // Load credentials from assets
@@ -167,7 +167,14 @@ class VPNService extends ChangeNotifier {
       debugPrint('Starting connection with:');
       debugPrint('Server: ${japanServer.name}');
       debugPrint('Config lines: ${ovpnConfig.split('\n').length}');
-      debugPrint('Config first 100 chars: ${ovpnConfig.substring(0, ovpnConfig.length > 100 ? 100 : ovpnConfig.length)}');
+      debugPrint('Config first 200 chars: ${ovpnConfig.substring(0, ovpnConfig.length > 200 ? 200 : ovpnConfig.length)}');
+      debugPrint('Config last 100 chars: ${ovpnConfig.substring(ovpnConfig.length > 100 ? ovpnConfig.length - 100 : 0)}');
+
+      // Check for <ca> and </ca> tags
+      final hasOpenCa = ovpnConfig.contains('<ca>');
+      final hasCloseCa = ovpnConfig.contains('</ca>');
+      debugPrint('Has <ca> tag: $hasOpenCa');
+      debugPrint('Has </ca> tag: $hasCloseCa');
 
       // Start VPN connection with username and password parameters
       await _openVPN.connect(
