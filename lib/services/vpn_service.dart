@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvpn_flutter/openvpn_flutter.dart';
 import '../models/vpn_server.dart';
 import '../models/vpn_status.dart';
+import 'proxy_service.dart';
 
 /// VPN service using OpenVPN Flutter package with local Japan VPN configuration
 class VPNService extends ChangeNotifier {
@@ -89,9 +90,15 @@ class VPNService extends ChangeNotifier {
     if (statusString.contains('connected')) {
       _updateStatus(VPNConnectionState.connected);
       _startConnectionTimer();
+
+      // Enable proxy routing for Japan server when connected
+      _enableProxyForJapanServer();
     } else if (statusString.contains('disconnected')) {
       _updateStatus(VPNConnectionState.disconnected);
       _stopConnectionTimer();
+
+      // Disable proxy when disconnected
+      ProxyService.disableProxy();
     } else if (statusString.contains('error')) {
       _updateStatus(VPNConnectionState.error, 'VPN connection error');
     } else {
@@ -134,7 +141,10 @@ class VPNService extends ChangeNotifier {
 
       final japanServer = _servers.first;
       _currentServer = japanServer;
+
+      // Show connecting status
       _updateStatus(VPNConnectionState.connecting);
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Load OVPN configuration from assets
       final ovpnConfig = await rootBundle.loadString('assets/vpn/jpn_vpn_tcp_fixed.ovpn');
@@ -147,6 +157,10 @@ class VPNService extends ChangeNotifier {
 
       debugPrint('Connecting to Japan VPN server...');
       debugPrint('Username: $username');
+
+      // Show authenticating status
+      _updateStatus(VPNConnectionState.authenticating);
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Start VPN connection
       await _openVPN.connect(
@@ -174,8 +188,14 @@ class VPNService extends ChangeNotifier {
         return;
       }
 
+      // Show disconnecting status
       _updateStatus(VPNConnectionState.disconnecting);
+      await Future.delayed(const Duration(milliseconds: 500));
+
       _openVPN.disconnect();
+
+      // Disable proxy when manually disconnecting
+      ProxyService.disableProxy();
 
       _currentServer = null;
       _stopConnectionTimer();
@@ -251,6 +271,20 @@ class VPNService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading last connected server: $e');
+    }
+  }
+
+  /// Enable proxy routing for Japan server
+  void _enableProxyForJapanServer() {
+    try {
+      // Use Japan proxy configuration
+      final proxyHost = '133.242.26.234'; // Japan proxy server IP
+      final proxyPort = 8080;
+
+      ProxyService.enableProxy(proxyHost, proxyPort);
+      debugPrint('✅ Enabled Japan proxy routing: $proxyHost:$proxyPort');
+    } catch (e) {
+      debugPrint('❌ Failed to enable Japan proxy: $e');
     }
   }
 
