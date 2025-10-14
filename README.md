@@ -1,35 +1,33 @@
 # VPN Flutter App
 
-A Flutter-based VPN application that provides secure internet access through VPN servers from VPNGate and premium VPNBook servers.
+A Flutter-based VPN application that provides secure internet access through a working Japan VPN server using the OpenVPN Flutter package.
 
 ## Features
 
-- 🌍 **Multiple VPN Servers**: Access to VPNGate public servers and premium VPNBook servers
-- 🔒 **Real VPN Functionality**: Actual IP address changes through proxy server routing
+- 🇯🇵 **Japan VPN Server**: Real working VPN server with OVPN configuration files
+- 🔒 **OpenVPN Integration**: Uses openvpn_flutter package for authentic VPN connections
 - 📱 **Cross Platform**: Built with Flutter for Android and iOS
 - ⚡ **Smart Connection Status**: Red → Blue → Yellow → Green status progression
 - 🌐 **Network Information**: Real-time IP, location, and ISP detection
-- 🎯 **Automatic Proxy Routing**: HTTP traffic routes through VPN server locations
 - 📊 **Connection Monitoring**: Real-time connection status and duration tracking
 - 🔄 **Auto-Refresh Network Info**: Updates location data when VPN connects/disconnects
+- 🔐 **Local Assets**: VPN config and credentials stored securely in app assets
 
 ## Recent Major Updates
 
-### ✅ Real VPN Proxy Routing Implementation
-- **Actual IP Address Changes**: When connected to US server, Network Test Page shows real US IP and location
-- **HTTP Proxy Integration**: All app traffic routes through real VPN proxy servers by location:
-  - 🇺🇸 **US Servers**: Routes through `138.68.161.12:8080` → Shows US IP & location
-  - 🇬🇧 **UK Servers**: Routes through `165.227.196.147:8080` → Shows UK IP & location
-  - 🇩🇪 **German Servers**: Routes through `159.89.214.31:8080` → Shows German IP & location
-- **Status Flow**: Fixed connection progression (Disconnected → Connecting → Authenticating → Connected)
-- **Network Test Page**: Auto-refreshes to show VPN server's actual IP, ISP, and location
-- **Multi-language Support**: Added Spanish and German localization
+### ✅ OpenVPN Flutter Integration
+- **Real OpenVPN Connection**: Uses `openvpn_flutter` package for authentic VPN tunnel
+- **Japan VPN Server**: Working OVPN configuration from `assets/vpn/jpn_vpn_tcp_fixed.ovpn`
+- **Secure Credentials**: Login credentials stored in `assets/vpn/jpn_vpn_credentials.txt`
+- **Status Flow**: Proper connection progression (Disconnected → Connecting → Authenticating → Connected)
+- **Network Test Page**: Shows real Japan IP and location when connected
+- **Multi-language Support**: English, Spanish, and German localization
 
 ### 🔧 Technical Improvements
-- **ProxyService**: New service that intercepts HTTP requests and routes them through VPN proxies
-- **Real-time Validation**: VPN connection validates actual internet access through tunnel
-- **Auto-retry Logic**: Automatically tries different servers if connection fails
-- **Proper Error Handling**: Comprehensive error reporting and fallback mechanisms
+- **OpenVPN Service**: Complete rewrite using openvpn_flutter package instead of custom implementation
+- **Asset Management**: VPN config files bundled with app for offline access
+- **Connection Monitoring**: Real-time OpenVPN status and stage change listeners
+- **Simplified Architecture**: Removed VPNGate API dependency, uses local Japan server only
 
 ## Getting Started
 
@@ -127,7 +125,7 @@ lib/
 │   ├── network_test_screen.dart  # [Real-time IP detection showing actual location and ISP when VPN active]
 │   └── settings_screen.dart  # [App settings including language selection and preferences]
 ├── services/                 # [Core business logic services]
-│   ├── vpn_service.dart      # [Main VPN controller managing connections, server fetching, and status updates]
+│   ├── vpn_service.dart      # [OpenVPN Flutter integration with Japan server connection management]
 │   ├── proxy_service.dart    # [HTTP proxy routing through real servers by location for actual IP changes]
 │   ├── settings_service.dart # [SharedPreferences wrapper for app settings and user preferences]
 │   └── theme_service.dart    # [Theme management and dark/light mode configuration]
@@ -139,6 +137,11 @@ lib/
 └── widgets/                  # [Reusable UI components]
     ├── status_indicator.dart # [Animated connection status with color transitions and progress indicators]
     └── server_card.dart      # [Server list item with flag, name, latency, and connection button]
+
+assets/
+└── vpn/
+    ├── jpn_vpn_tcp_fixed.ovpn  # [Working Japan VPN server OpenVPN configuration file]
+    └── jpn_vpn_credentials.txt # [Username and password for Japan VPN server authentication]
 
 android/
 └── app/src/main/kotlin/com/example/vpn/

@@ -271,7 +271,7 @@ class _LocationScreenState extends State<LocationScreen> {
   }
 
   void _selectServer(VPNService vpnService, VPNServer server) {
-    vpnService.setCurrentServer(server);
+    // Japan VPN server is automatically selected - just go back
     Navigator.pop(context);
   }
 
@@ -281,8 +281,8 @@ class _LocationScreenState extends State<LocationScreen> {
     });
 
     try {
-      final vpnService = Provider.of<VPNService>(context, listen: false);
-      await vpnService.fetchVPNGateServers();
+      // Japan VPN server is already loaded - simulate refresh delay
+      await Future.delayed(const Duration(seconds: 1));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

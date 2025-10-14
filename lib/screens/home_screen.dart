@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../services/vpn_service.dart';
-import '../models/vpn_status.dart';
 import '../widgets/timer_widget.dart';
 import '../widgets/status_indicator.dart';
 import '../widgets/power_button.dart';
@@ -231,10 +230,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _toggleConnection(VPNService vpnService) async {
     if (vpnService.status.isConnected) {
       await vpnService.disconnect();
-    } else if (vpnService.currentServer != null) {
-      await vpnService.connectToVPNGate(vpnService.currentServer!);
     } else {
-      _openLocationSelection(vpnService);
+      // Connect to Japan VPN server using OpenVPN Flutter
+      await vpnService.connectToJapanVPN();
     }
   }
 

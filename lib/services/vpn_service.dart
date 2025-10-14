@@ -1,490 +1,249 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:csv/csv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:openvpn_flutter/openvpn_flutter.dart';
 import '../models/vpn_server.dart';
 import '../models/vpn_status.dart';
-import '../models/vpnbook_servers.dart';
-import 'proxy_service.dart';
 
+/// VPN service using OpenVPN Flutter package with local Japan VPN configuration
 class VPNService extends ChangeNotifier {
   static final VPNService _instance = VPNService._internal();
   factory VPNService() => _instance;
   VPNService._internal() {
-    _setupMethodChannel();
+    _initializeOpenVPN();
     _loadLastConnectedServer();
   }
 
-  static const MethodChannel _vpnChannel = MethodChannel('com.example.vpn/vpn');
+  // OpenVPN Flutter instance
+  late OpenVPN _openVPN;
 
   VPNStatus _status = VPNStatus(state: VPNConnectionState.disconnected);
   final List<VPNServer> _servers = [];
   VPNServer? _currentServer;
   Timer? _connectionTimer;
-  bool _vpnPermissionGranted = false;
 
-  // Auto-retry logic
-  int _currentServerIndex = 0;
-  int _retryAttempts = 0;
-  final int _maxRetryAttempts = 3;
-  final List<String> _failedServers = [];
+  // Japan VPN server configuration from assets
+  static const String _jpnServerName = 'Japan VPN Server';
+  static const String _jpnServerHost = 'public-vpn-48.opengw.net';
+  static const String _jpnServerCountry = 'Japan';
+  static const String _jpnServerFlag = '🇯🇵';
 
+  // Getters
   VPNStatus get status => _status;
   List<VPNServer> get servers => _servers;
   VPNServer? get currentServer => _currentServer;
-  bool get vpnPermissionGranted => _vpnPermissionGranted;
 
-  void _setupMethodChannel() {
-    _vpnChannel.setMethodCallHandler((call) async {
-      switch (call.method) {
-        case 'vpnStatus':
-          final connected = call.arguments['connected'] as bool;
-          final message = call.arguments['message'] as String;
+  /// Initialize OpenVPN Flutter and load Japan VPN server
+  void _initializeOpenVPN() {
+    _openVPN = OpenVPN(
+      onVpnStatusChanged: (data) {
+        debugPrint('OpenVPN Status: ${data.toString()}');
+        _handleVPNStatusChange(data);
+      },
+      onVpnStageChanged: (data, raw) {
+        debugPrint('OpenVPN Stage: $data - Raw: $raw');
+        _handleVPNStageChange(data, raw);
+      },
+    );
 
-          if (connected) {
-            _updateStatus(VPNConnectionState.connected);
-            _startConnectionTimer();
-          } else {
-            // Parse the message to determine the correct state
-            if (message.contains('Connecting')) {
-              _updateStatus(VPNConnectionState.connecting);
-            } else if (message.contains('Authenticating')) {
-              _updateStatus(VPNConnectionState.authenticating);
-            } else {
-              _updateStatus(VPNConnectionState.disconnected);
-              _stopConnectionTimer();
-              if (_status.state == VPNConnectionState.disconnecting) {
-                _currentServer = null;
-              }
-            }
-          }
-
-          debugPrint('VPN Status: $message');
-          break;
-
-        case 'vpnValidationResult':
-          final success = call.arguments['success'] as bool;
-          final error = call.arguments['error'] as String?;
-
-          if (success) {
-            debugPrint('✅ VPN validation successful');
-            _updateStatus(VPNConnectionState.connected);
-
-            // Enable proxy routing when VPN connects successfully
-            if (_currentServer != null) {
-              _enableProxyForServer(_currentServer!);
-            }
-          } else {
-            debugPrint('❌ VPN validation failed: $error');
-            await _handleValidationFailure(error ?? 'Validation failed');
-          }
-          break;
-
-        case 'vpnPermissionGranted':
-          final granted = call.arguments as bool;
-          _vpnPermissionGranted = granted;
-
-          if (granted && _currentServer != null) {
-            await _connectToNativeVpn(_currentServer!);
-          } else if (!granted) {
-            _updateStatus(VPNConnectionState.error, 'VPN permission denied');
-          }
-          break;
-      }
-    });
+    // Load the Japan VPN server
+    _loadJapanVPNServer();
   }
 
+  /// Load Japan VPN server configuration
+  void _loadJapanVPNServer() {
+    final japanServer = VPNServer(
+      name: _jpnServerName,
+      ip: _jpnServerHost,
+      country: _jpnServerCountry,
+      city: 'Tokyo', // Required field
+      flagCode: 'jp', // Required field
+      ovpnConfig: '', // Will be loaded from assets
+      latency: 50, // Estimated latency
+      uptime: 99, // High uptime
+      signalStrength: 90, // Strong signal
+    );
+
+    _servers.clear();
+    _servers.add(japanServer);
+    notifyListeners();
+    debugPrint('Loaded Japan VPN server');
+  }
+
+  /// Handle OpenVPN status changes
+  void _handleVPNStatusChange(VpnStatus? status) {
+    if (status == null) return;
+
+    // Handle the VPN status based on string representation
+    // The openvpn_flutter package uses different status values
+    final statusString = status.toString();
+    debugPrint('VPN Status String: $statusString');
+
+    if (statusString.contains('connected')) {
+      _updateStatus(VPNConnectionState.connected);
+      _startConnectionTimer();
+    } else if (statusString.contains('disconnected')) {
+      _updateStatus(VPNConnectionState.disconnected);
+      _stopConnectionTimer();
+    } else if (statusString.contains('error')) {
+      _updateStatus(VPNConnectionState.error, 'VPN connection error');
+    } else {
+      debugPrint('Unknown VPN status: $status');
+    }
+  }
+
+  /// Handle OpenVPN stage changes
+  void _handleVPNStageChange(VPNStage stage, String raw) {
+    switch (stage) {
+      case VPNStage.connecting:
+        _updateStatus(VPNConnectionState.connecting);
+        break;
+      case VPNStage.authenticating:
+        _updateStatus(VPNConnectionState.authenticating);
+        break;
+      case VPNStage.connected:
+        _updateStatus(VPNConnectionState.connected);
+        _startConnectionTimer();
+        break;
+      case VPNStage.disconnected:
+        _updateStatus(VPNConnectionState.disconnected);
+        _stopConnectionTimer();
+        break;
+      case VPNStage.error:
+        _updateStatus(VPNConnectionState.error, raw);
+        break;
+      default:
+        debugPrint('Unknown VPN stage: $stage');
+    }
+  }
+
+  /// Connect to Japan VPN server using local OVPN file
+  Future<void> connectToJapanVPN() async {
+    try {
+      if (_servers.isEmpty) {
+        _updateStatus(VPNConnectionState.error, 'No VPN servers available');
+        return;
+      }
+
+      final japanServer = _servers.first;
+      _currentServer = japanServer;
+      _updateStatus(VPNConnectionState.connecting);
+
+      // Load OVPN configuration from assets
+      final ovpnConfig = await rootBundle.loadString('assets/vpn/jpn_vpn_tcp_fixed.ovpn');
+
+      // Load credentials from assets
+      final credentials = await rootBundle.loadString('assets/vpn/jpn_vpn_credentials.txt');
+      final credentialLines = credentials.trim().split('\\n');
+      final username = credentialLines.isNotEmpty ? credentialLines[0] : 'vpn';
+      final password = credentialLines.length > 1 ? credentialLines[1] : 'vpn';
+
+      debugPrint('Connecting to Japan VPN server...');
+      debugPrint('Username: $username');
+
+      // Start VPN connection
+      await _openVPN.connect(
+        ovpnConfig,
+        japanServer.name,
+        username: username,
+        password: password,
+        bypassPackages: [], // Optional: apps to bypass VPN
+        certIsRequired: false, // Set based on your OVPN config
+      );
+
+      debugPrint('VPN connection initiated successfully');
+
+    } catch (e) {
+      debugPrint('Error connecting to Japan VPN: $e');
+      _updateStatus(VPNConnectionState.error, e.toString());
+    }
+  }
+
+  /// Disconnect from VPN
+  Future<void> disconnect() async {
+    try {
+      if (_status.state == VPNConnectionState.disconnected) {
+        debugPrint('VPN already disconnected');
+        return;
+      }
+
+      _updateStatus(VPNConnectionState.disconnecting);
+      _openVPN.disconnect();
+
+      _currentServer = null;
+      _stopConnectionTimer();
+
+      debugPrint('VPN disconnected successfully');
+
+    } catch (e) {
+      debugPrint('Error disconnecting VPN: $e');
+      _updateStatus(VPNConnectionState.error, e.toString());
+    }
+  }
+
+  /// Initialize the VPN service (called from main)
   Future<void> initialize() async {
     try {
-      // Load real VPNBook servers
-      _loadPredefinedServers();
-
-      // Fetch additional VPNGate servers (real public servers)
-      await fetchVPNGateServers();
-      await _prepareVpn();
+      // OpenVPN Flutter handles permissions internally
+      debugPrint('VPN service initialized with Japan VPN server');
     } catch (e) {
       debugPrint('Error initializing VPN service: $e');
     }
   }
 
-  void _loadPredefinedServers() {
-    final predefinedServers = VPNBookServers.getPredefinedServers();
-    _servers.addAll(predefinedServers);
-    notifyListeners();
-    debugPrint('Loaded ${predefinedServers.length} predefined servers');
-  }
-
-  Future<bool> _prepareVpn() async {
-    try {
-      final result = await _vpnChannel.invokeMethod('prepareVpn');
-      _vpnPermissionGranted = result as bool;
-      return _vpnPermissionGranted;
-    } catch (e) {
-      debugPrint('Error preparing VPN: $e');
-      return false;
-    }
-  }
-
-  Future<void> fetchVPNGateServers() async {
-    try {
-      debugPrint('Fetching VPN Gate servers...');
-      final response = await http.get(
-        Uri.parse('https://www.vpngate.net/api/iphone/'),
-        headers: {'User-Agent': 'VPNGate API Client'},
-      );
-
-      if (response.statusCode == 200) {
-        final csvData = response.body;
-        final lines = csvData.split('\n');
-
-        final vpnGateServers = <VPNServer>[];
-
-        for (int i = 2; i < lines.length; i++) {
-          final line = lines[i].trim();
-          if (line.isEmpty || line.startsWith('*') || line.startsWith('#')) continue;
-
-          try {
-            final csvFields = const CsvToListConverter().convert(line)[0];
-            if (csvFields.length >= 15) {
-              final server = VPNServer.fromVPNGateCSV(
-                csvFields.map((field) => field.toString()).toList()
-              );
-
-              // Enhanced filtering for better servers
-              if (server.ovpnConfig.isNotEmpty &&
-                  server.latency > 0 &&
-                  server.latency < 500 &&  // Lower latency requirement
-                  server.uptime > 24 &&    // At least 24 hours uptime
-                  server.signalStrength > 50) {  // Decent signal strength
-                vpnGateServers.add(server);
-              }
-            }
-          } catch (e) {
-            debugPrint('Error parsing VPN Gate server: $e');
-          }
-        }
-
-        // Test and validate servers before adding
-        final validatedServers = await _validateServers(vpnGateServers);
-
-        _servers.clear();
-        _loadPredefinedServers();
-        _servers.addAll(validatedServers);
-        _servers.sort((a, b) => a.latency.compareTo(b.latency));
-
-        debugPrint('Loaded ${validatedServers.length} validated VPN Gate servers');
-        notifyListeners();
-      } else {
-        debugPrint('Failed to fetch VPN Gate servers: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error fetching VPNGate servers: $e');
-      _loadPredefinedServers();
-    }
-  }
-
-  Future<void> connectToVPNGate(VPNServer server) async {
-    try {
-      _updateStatus(VPNConnectionState.connecting);
-      _currentServer = server;
-
-      if (!_vpnPermissionGranted) {
-        final prepared = await _prepareVpn();
-        if (!prepared) {
-          // Will wait for permission callback
-          return;
-        }
-      }
-
-      // Show authenticating status when starting connection
-      _updateStatus(VPNConnectionState.authenticating);
-      await _connectToNativeVpn(server);
-    } catch (e) {
-      _updateStatus(VPNConnectionState.error, e.toString());
-    }
-  }
-
-  Future<void> _connectToNativeVpn(VPNServer server) async {
-    try {
-      String decodedConfig;
-      String username;
-      String password;
-      int port;
-
-      // Check if this is a VPNBook server
-      if (server.name.startsWith('vpnbook-')) {
-        // Use VPNBook configuration and credentials
-        decodedConfig = VPNBookServers.getRawOVPNConfig(server.name);
-        username = VPNBookServers.username;
-        password = VPNBookServers.password;
-        port = 80; // VPNBook uses port 80 for TCP
-        debugPrint('Using VPNBook server: ${server.name}');
-      } else {
-        // Use VPNGate configuration and credentials
-        decodedConfig = utf8.decode(base64.decode(server.ovpnConfig));
-        username = 'vpn';
-        password = 'vpn';
-        port = 1194; // Default OpenVPN port
-        debugPrint('Using VPNGate server: ${server.name}');
-      }
-
-      debugPrint('Authenticating with VPN server: ${server.name} (${server.ip}:$port)');
-
-      await _vpnChannel.invokeMethod('connectVpn', {
-        'serverConfig': decodedConfig,
-        'serverHost': server.ip,
-        'serverPort': port,
-        'username': username,
-        'password': password,
-      });
-
-      debugPrint('Connection attempt started for VPN server: ${server.name}');
-    } catch (e) {
-      _updateStatus(VPNConnectionState.error, 'Failed to connect: ${e.toString()}');
-    }
-  }
-
-  Future<void> disconnect() async {
-    try {
-      _updateStatus(VPNConnectionState.disconnecting);
-
-      await _vpnChannel.invokeMethod('disconnectVpn');
-
-      debugPrint('Disconnecting from VPN');
-    } catch (e) {
-      _updateStatus(VPNConnectionState.error, e.toString());
-    }
-  }
-
+  /// Update VPN connection status
   void _updateStatus(VPNConnectionState state, [String? errorMessage]) {
     _status = VPNStatus(
       state: state,
-      connectedTime: _status.connectedTime,
+      connectedTime: state == VPNConnectionState.connected ? Duration.zero : _status.connectedTime,
       errorMessage: errorMessage,
     );
     notifyListeners();
+    debugPrint('VPN Status updated: $state${errorMessage != null ? ' - $errorMessage' : ''}');
   }
 
+  /// Start connection timer for tracking duration
   void _startConnectionTimer() {
     _stopConnectionTimer();
-    final startTime = DateTime.now();
-
     _connectionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      final elapsed = DateTime.now().difference(startTime);
-      _status = _status.copyWith(connectedTime: elapsed);
-      notifyListeners();
+      notifyListeners(); // Update UI with new duration
     });
   }
 
+  /// Stop connection timer
   void _stopConnectionTimer() {
     _connectionTimer?.cancel();
     _connectionTimer = null;
-    _status = _status.copyWith(connectedTime: Duration.zero);
   }
 
-  void setCurrentServer(VPNServer server) {
-    _currentServer = server;
-    _saveLastConnectedServer(server);
-    notifyListeners();
-  }
+  /// Save last connected server
+  Future<void> _saveLastConnectedServer() async {
+    if (_currentServer == null) return;
 
-  Future<void> _saveLastConnectedServer(VPNServer server) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final serverData = {
-        'name': server.name,
-        'country': server.country,
-        'city': server.city,
-        'flagCode': server.flagCode,
-        'latency': server.latency,
-        'signalStrength': server.signalStrength,
-        'ovpnConfig': server.ovpnConfig,
-        'ip': server.ip,
-        'hostname': server.hostname,
-        'uptime': server.uptime,
-        'countryShort': server.countryShort,
-      };
-      await prefs.setString('last_connected_server', jsonEncode(serverData));
+      await prefs.setString('last_connected_server', _currentServer!.name);
     } catch (e) {
       debugPrint('Error saving last connected server: $e');
     }
   }
 
-  void _enableProxyForServer(VPNServer server) {
-    try {
-      final proxyConfig = ProxyService.getProxyForServer(server.name);
-      final proxyHost = proxyConfig['host'] as String;
-      final proxyPort = proxyConfig['port'] as int;
-      final location = proxyConfig['location'] as String;
-
-      // Enable proxy to route traffic through VPN server's location
-      ProxyService.enableProxy(proxyHost, proxyPort);
-
-      debugPrint('🌍 Enabled proxy routing through $location ($proxyHost:$proxyPort)');
-      debugPrint('🔄 All HTTP traffic now routing through VPN server location');
-
-    } catch (e) {
-      debugPrint('❌ Failed to enable proxy for ${server.name}: $e');
-    }
-  }
-
+  /// Load last connected server
   Future<void> _loadLastConnectedServer() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final serverJson = prefs.getString('last_connected_server');
-      if (serverJson != null) {
-        final serverData = jsonDecode(serverJson) as Map<String, dynamic>;
-        _currentServer = VPNServer(
-          name: serverData['name'] ?? '',
-          country: serverData['country'] ?? '',
-          city: serverData['city'] ?? '',
-          flagCode: serverData['flagCode'] ?? '',
-          latency: serverData['latency'] ?? 0,
-          signalStrength: serverData['signalStrength'] ?? 0,
-          ovpnConfig: serverData['ovpnConfig'] ?? '',
-          ip: serverData['ip'] ?? '',
-          hostname: serverData['hostname'] ?? '',
-          uptime: serverData['uptime']?.toDouble() ?? 0.0,
-          countryShort: serverData['countryShort'] ?? '',
-        );
-        notifyListeners();
+      final lastServerName = prefs.getString('last_connected_server');
+
+      if (lastServerName != null) {
+        debugPrint('Last connected server: $lastServerName');
       }
     } catch (e) {
       debugPrint('Error loading last connected server: $e');
     }
   }
 
-  Future<void> reconnectToLastServer() async {
-    if (_currentServer != null) {
-      await connectToVPNGate(_currentServer!);
-    }
-  }
-
-  bool get hasServers => _servers.isNotEmpty;
-
-  Future<List<VPNServer>> _validateServers(List<VPNServer> servers) async {
-    final validServers = <VPNServer>[];
-
-    // Test up to 10 servers to avoid long delays
-    final serversToTest = servers.take(10).toList();
-
-    for (final server in serversToTest) {
-      try {
-        final isValid = await _testServerConnectivity(server);
-        if (isValid) {
-          validServers.add(server);
-          debugPrint('✅ Server validated: ${server.name} (${server.ip})');
-        } else {
-          debugPrint('❌ Server failed validation: ${server.name} (${server.ip})');
-        }
-      } catch (e) {
-        debugPrint('❌ Server validation error: ${server.name} - $e');
-      }
-    }
-
-    return validServers;
-  }
-
-  Future<bool> _testServerConnectivity(VPNServer server) async {
-    try {
-      // Quick socket test to see if server is reachable
-      final socket = await Socket.connect(InternetAddress(server.ip), 1194)
-          .timeout(const Duration(seconds: 5));
-      socket.destroy();
-
-      // Additional validation: check if OVPN config is properly formatted
-      if (server.ovpnConfig.isEmpty) return false;
-
-      final decodedConfig = utf8.decode(base64.decode(server.ovpnConfig));
-      if (!decodedConfig.contains('remote') || !decodedConfig.contains('dev tun')) {
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<void> _handleValidationFailure(String error) async {
-    debugPrint('🔄 Handling validation failure: $error');
-
-    // Mark current server as failed
-    if (_currentServer != null) {
-      _failedServers.add(_currentServer!.ip);
-      debugPrint('❌ Marked server ${_currentServer!.name} (${_currentServer!.ip}) as failed');
-    }
-
-    _retryAttempts++;
-
-    if (_retryAttempts <= _maxRetryAttempts) {
-      debugPrint('🔄 Attempting retry $_retryAttempts/$_maxRetryAttempts');
-      _updateStatus(VPNConnectionState.connecting, 'Trying next server...');
-
-      // Find next working server
-      final nextServer = _findNextWorkingServer();
-      if (nextServer != null) {
-        debugPrint('🎯 Trying next server: ${nextServer.name} (${nextServer.ip})');
-        await Future.delayed(const Duration(seconds: 2));
-        await connectToVPNGate(nextServer);
-      } else {
-        debugPrint('💥 No more servers to try');
-        _updateStatus(VPNConnectionState.error, 'No working servers available');
-        _resetRetryState();
-      }
-    } else {
-      debugPrint('💥 Max retry attempts reached');
-      _updateStatus(VPNConnectionState.error, 'All servers failed validation');
-      _resetRetryState();
-    }
-  }
-
-  VPNServer? _findNextWorkingServer() {
-    final availableServers = _servers.where((server) =>
-      !_failedServers.contains(server.ip)
-    ).toList();
-
-    if (availableServers.isEmpty) {
-      debugPrint('📊 No more available servers (${_failedServers.length} failed)');
-      return null;
-    }
-
-    // Sort by quality (latency, uptime, signal strength)
-    availableServers.sort((a, b) {
-      final scoreA = _calculateServerScore(a);
-      final scoreB = _calculateServerScore(b);
-      return scoreB.compareTo(scoreA); // Higher score is better
-    });
-
-    debugPrint('📊 Found ${availableServers.length} available servers');
-    return availableServers.first;
-  }
-
-  double _calculateServerScore(VPNServer server) {
-    // Score based on: low latency + high uptime + high signal strength
-    final latencyScore = server.latency > 0 ? (1000 - server.latency) / 1000 : 0;
-    final uptimeScore = server.uptime / 100; // Normalize to 0-1
-    final signalScore = server.signalStrength / 100; // Normalize to 0-1
-
-    return (latencyScore * 0.4) + (uptimeScore * 0.3) + (signalScore * 0.3);
-  }
-
-  void _resetRetryState() {
-    _retryAttempts = 0;
-    _currentServerIndex = 0;
-    _failedServers.clear();
-  }
-
-  Future<void> connectToVPNGateWithValidation(VPNServer server) async {
-    debugPrint('🚀 Starting validated connection to ${server.name}');
-    _resetRetryState();
-    await connectToVPNGate(server);
-  }
-
+  /// Clean up resources
   @override
   void dispose() {
     _stopConnectionTimer();
