@@ -15,6 +15,14 @@ A Flutter-based VPN application that provides secure internet access through a w
 
 ## Recent Major Updates
 
+### ✅ **Latest: OpenVPN Configuration Fixes (v1.3)**
+- **Fixed XML Parsing**: Resolved "No endtag </ca> for starttag <ca> found" error that prevented config loading
+- **Removed Android-Incompatible Directives**: Eliminated `data-ciphers AES-128-CBC` directive that caused OpenVPN process to exit on Android
+- **Optimized Config Structure**: Reorganized OVPN file to match working format exactly (`client` directive first, proper order)
+- **Enhanced Debugging**: Added certificate tag validation and config loading diagnostics
+- **Stable Connection**: OpenVPN engine now initializes successfully without configuration errors
+- **Asset Management**: Added minimal config reference for testing and validation
+
 ### ✅ OpenVPN Flutter Integration
 - **Real OpenVPN Connection**: Uses `openvpn_flutter` package for authentic VPN tunnel
 - **Japan VPN Server**: Working OVPN configuration from `assets/vpn/jpn_vpn_tcp_fixed.ovpn`
@@ -140,7 +148,8 @@ lib/
 
 assets/
 └── vpn/
-    ├── jpn_vpn_tcp_fixed.ovpn  # [Working Japan VPN server OpenVPN configuration file]
+    ├── jpn_vpn_tcp_fixed.ovpn  # [Working Japan VPN server OpenVPN configuration file - fixed XML parsing and Android compatibility]
+    ├── jpn_vpn_minimal.ovpn    # [Minimal reference config for testing and validation]
     └── jpn_vpn_credentials.txt # [Username and password for Japan VPN server authentication]
 
 android/
@@ -194,12 +203,42 @@ This app provides **genuine VPN functionality** by routing HTTP traffic through 
 
 This VPN application is for educational and legitimate privacy purposes only. Users are responsible for complying with their local laws and the terms of service of VPN servers they connect to.
 
+## Troubleshooting
+
+### Common OpenVPN Configuration Issues
+
+#### ❌ "No endtag </ca> for starttag <ca> found"
+**Fixed in v1.3** - This XML parsing error occurred when the OVPN certificate section had formatting issues.
+- **Solution**: Updated config file structure to ensure proper `<ca>...</ca>` XML format
+- **Prevention**: Use the fixed `jpn_vpn_tcp_fixed.ovpn` configuration file
+
+#### ❌ "OpenVPN process exited" after vpn_generate_config
+**Fixed in v1.3** - Android OpenVPN doesn't support certain directives like `data-ciphers`.
+- **Solution**: Removed `data-ciphers AES-128-CBC` directive from config
+- **Alternative**: Use `cipher AES-128-CBC` instead for Android compatibility
+
+#### 🔧 Debug OpenVPN Connection Issues
+```bash
+# Test OVPN config file manually (macOS/Linux)
+sudo openvpn --config assets/vpn/jpn_vpn_tcp_fixed.ovpn
+
+# View Flutter debug logs
+flutter run
+# Look for "OpenVPN Stage:" and "Starting connection" messages
+```
+
+### Verification Steps
+1. Check `flutter run` logs for "OpenVPN engine initialized successfully"
+2. Ensure no "RemoteException" or XML parsing errors
+3. Verify config loads showing correct line count (45+ lines)
+4. Test connection shows progression: Connecting → Authenticating → Connected
+
 ## Support
 
 If you encounter any issues or have questions:
 - Open an issue on GitHub
-- Check the [troubleshooting guide](docs/troubleshooting.md)
-- Review server connection logs in Android Studio
+- Check the troubleshooting section above for OpenVPN configuration fixes
+- Review server connection logs in Android Studio using `flutter run`
 
 ---
 
