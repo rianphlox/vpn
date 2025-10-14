@@ -166,7 +166,8 @@ class VPNService extends ChangeNotifier {
       // Use the simplest connection method with separate username/password
       debugPrint('Starting connection with:');
       debugPrint('Server: ${japanServer.name}');
-      debugPrint('Config lines: ${ovpnConfig.split('\\n').length}');
+      debugPrint('Config lines: ${ovpnConfig.split('\n').length}');
+      debugPrint('Config first 100 chars: ${ovpnConfig.substring(0, ovpnConfig.length > 100 ? 100 : ovpnConfig.length)}');
 
       // Start VPN connection with username and password parameters
       await _openVPN.connect(
@@ -216,10 +217,15 @@ class VPNService extends ChangeNotifier {
   /// Initialize the VPN service (called from main)
   Future<void> initialize() async {
     try {
-      // Skip complex initialization - let openvpn_flutter handle it
-      debugPrint('VPN service initialized with Japan VPN server');
+      // ✅ Initialize the OpenVPN engine first (as ChatGPT suggested)
+      await _openVPN.initialize(
+        groupIdentifier: "group.com.example.vpn",
+        providerBundleIdentifier: "com.example.vpn.OpenVPNProvider",
+        localizedDescription: "Japan VPN Connection",
+      );
+      debugPrint('✅ OpenVPN engine initialized successfully');
     } catch (e) {
-      debugPrint('Error initializing VPN service: $e');
+      debugPrint('❌ Error initializing OpenVPN engine: $e');
     }
   }
 
