@@ -1,4 +1,4 @@
-# Contributing to Proxy Cloud
+# Contributing to QShield
 
 Thank you for considering contributing to the QShield! We appreciate your help in improving and expanding the project.
 
@@ -23,7 +23,7 @@ Thank you for considering contributing to the QShield! We appreciate your help i
    - Create your own fork of the repository.
    
 2. **Clone Your Fork:**
-   - `git clone https://github.com/your-username/vpn.git`
+   - `git clone https://github.com/rianphlox/vpn.git`
 
 3. **Create a New Branch:**
    - `git checkout -b feature/YourFeatureName`
