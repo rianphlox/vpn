@@ -1,6 +1,6 @@
 # Contributing to Proxy Cloud
 
-Thank you for considering contributing to the Proxy Cloud! We appreciate your help in improving and expanding the project.
+Thank you for considering contributing to the QShield! We appreciate your help in improving and expanding the project.
 
 ## How Can I Contribute?
 
