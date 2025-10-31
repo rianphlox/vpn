@@ -23,7 +23,7 @@ Thank you for considering contributing to the Proxy Cloud! We appreciate your he
    - Create your own fork of the repository.
    
 2. **Clone Your Fork:**
-   - `git clone https://github.com/your-username/ProxyCloud.git`
+   - `git clone https://github.com/your-username/vpn.git`
 
 3. **Create a New Branch:**
    - `git checkout -b feature/YourFeatureName`
@@ -50,4 +50,3 @@ Thank you for considering contributing to the Proxy Cloud! We appreciate your he
 
 Thank you for your interest in contributing!
 
-**Hossein Pira**
