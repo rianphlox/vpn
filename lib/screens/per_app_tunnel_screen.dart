@@ -172,10 +172,10 @@ class _PerAppTunnelScreenState extends State<PerAppTunnelScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
+      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
         title: Text(context.tr('per_app_tunnel.title')),
-        backgroundColor: AppTheme.primaryDark,
+        backgroundColor: const Color(0xFF0F0F23),
         elevation: 0,
         actions: [
           // Select all button
@@ -211,7 +211,18 @@ class _PerAppTunnelScreenState extends State<PerAppTunnelScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0F0F23),
+              Color(0xFF1A1A3A),
+            ],
+          ),
+        ),
+        child: _isLoading
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -328,6 +339,7 @@ class _PerAppTunnelScreenState extends State<PerAppTunnelScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 }

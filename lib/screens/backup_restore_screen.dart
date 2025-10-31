@@ -148,19 +148,30 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   Widget _buildBackupRestoreScreen(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
+      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
         title: Text(context.tr(TranslationKeys.backupRestoreTitle)),
-        backgroundColor: AppTheme.primaryDark,
+        backgroundColor: const Color(0xFF0F0F23),
         elevation: 0,
       ),
-      body: Padding(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0F0F23),
+              Color(0xFF1A1A3A),
+            ],
+          ),
+        ),
+        child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
-              color: AppTheme.cardDark,
+              color: const Color(0xFF2A2A4A),
               elevation: 4,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -189,7 +200,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     ElevatedButton(
                       onPressed: _isLoading ? null : _exportData,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
+                        backgroundColor: const Color(0xFF00D4AA),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -208,7 +219,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
             const SizedBox(height: 16),
             Card(
-              color: AppTheme.cardDark,
+              color: const Color(0xFF2A2A4A),
               elevation: 4,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -237,7 +248,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     ElevatedButton(
                       onPressed: _isLoading ? null : _importData,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
+                        backgroundColor: const Color(0xFF00D4AA),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -261,12 +272,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 style: TextStyle(
                   color: _statusMessage!.contains('Error')
                       ? Colors.red
-                      : AppTheme.connectedGreen,
+                      : const Color(0xFF00D4AA),
                 ),
               ),
             ],
           ],
         ),
+      ),
       ),
     );
   }

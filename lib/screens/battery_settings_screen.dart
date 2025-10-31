@@ -32,7 +32,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
                 TranslationKeys.batterySettingsBatteryOptimizationOpened,
               ),
             ),
-            backgroundColor: AppTheme.primaryBlue,
+            backgroundColor: const Color(0xFF00D4AA),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -76,7 +76,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
             content: Text(
               context.tr(TranslationKeys.batterySettingsGeneralBatteryOpened),
             ),
-            backgroundColor: AppTheme.primaryBlue,
+            backgroundColor: const Color(0xFF00D4AA),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -120,7 +120,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
             content: Text(
               context.tr(TranslationKeys.batterySettingsAppSettingsOpened),
             ),
-            backgroundColor: AppTheme.primaryBlue,
+            backgroundColor: const Color(0xFF00D4AA),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -163,17 +163,28 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
 
   Widget _buildBatterySettingsScreen(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
+      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
         title: Text(context.tr(TranslationKeys.batterySettingsTitle)),
-        backgroundColor: AppTheme.primaryDark,
+        backgroundColor: const Color(0xFF0F0F23),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: SingleChildScrollView(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0F0F23),
+              Color(0xFF1A1A3A),
+            ],
+          ),
+        ),
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,10 +193,10 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.cardDark,
+                color: const Color(0xFF2A2A4A),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppTheme.connectedGreen.withValues(alpha: 0.3),
+                  color: const Color(0xFF00D4AA).withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -194,7 +205,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
                   Icon(
                     Icons.battery_charging_full,
                     size: 48,
-                    color: AppTheme.connectedGreen,
+                    color: const Color(0xFF00D4AA),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -362,6 +373,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -374,7 +386,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
     required VoidCallback? onPressed,
   }) {
     return Card(
-      color: AppTheme.cardDark,
+      color: const Color(0xFF2A2A4A),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -387,10 +399,10 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    color: const Color(0xFF00D4AA).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: AppTheme.primaryBlue, size: 24),
+                  child: Icon(icon, color: const Color(0xFF00D4AA), size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -442,7 +454,7 @@ class _BatterySettingsScreenState extends State<BatterySettingsScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
+                  backgroundColor: const Color(0xFF00D4AA),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
