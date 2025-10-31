@@ -237,35 +237,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.white,
                         ),
                       ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.search, color: Colors.white),
-                            onPressed: () {
-                              showServerSelectionScreen(
-                                context: context,
-                                configs: provider.configs,
-                                selectedConfig: provider.selectedConfig,
-                                isConnecting: provider.isConnecting,
-                                onConfigSelected: (config) async {
-                                  await provider.selectConfig(config);
-                                  await provider.connectToServer(config, provider.isProxyMode);
-                                },
-                              );
+                      IconButton(
+                        icon: const Icon(Icons.search, color: Colors.white),
+                        onPressed: () {
+                          showServerSelectionScreen(
+                            context: context,
+                            configs: provider.configs,
+                            selectedConfig: provider.selectedConfig,
+                            isConnecting: provider.isConnecting,
+                            onConfigSelected: (config) async {
+                              await provider.selectConfig(config);
+                              await provider.connectToServer(config, provider.isProxyMode);
                             },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.settings, color: Colors.white),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AboutScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ],
                   ),
