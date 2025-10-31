@@ -84,20 +84,21 @@ class _ToolsScreenState extends State<ToolsScreen> {
                         mainAxisSpacing: 16,
                         childAspectRatio: 1.1,
                         children: [
-                          _buildModernToolCard(
-                            title: 'Language',
-                            description: 'Change app language',
-                            icon: Icons.language,
-                            color: Colors.blue,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LanguageSettingsScreen(),
-                                ),
-                              );
-                            },
-                          ),
+                          // Language option commented out as requested
+                          // _buildModernToolCard(
+                          //   title: 'Language',
+                          //   description: 'Change app language',
+                          //   icon: Icons.language,
+                          //   color: Colors.blue,
+                          //   onTap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => const LanguageSettingsScreen(),
+                          //       ),
+                          //     );
+                          //   },
+                          // ),
                           _buildModernToolCard(
                             title: 'Subscriptions',
                             description: 'Manage your subscriptions',

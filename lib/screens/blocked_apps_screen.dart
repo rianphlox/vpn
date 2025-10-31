@@ -186,10 +186,10 @@ class _BlockedAppsScreenState extends State<BlockedAppsScreen> {
 
   Widget _buildBlockedAppsScreen(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
+      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
         title: Text(context.tr(TranslationKeys.blockedAppsTitle)),
-        backgroundColor: AppTheme.primaryDark,
+        backgroundColor: const Color(0xFF0F0F23),
         elevation: 0,
         actions: [
           // Clear selection button
@@ -214,7 +214,18 @@ class _BlockedAppsScreenState extends State<BlockedAppsScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0F0F23),
+              Color(0xFF1A1A3A),
+            ],
+          ),
+        ),
+        child: _isLoading
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -342,6 +353,7 @@ class _BlockedAppsScreenState extends State<BlockedAppsScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 }

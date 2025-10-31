@@ -84,10 +84,10 @@ class _IpInfoScreenState extends State<IpInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
+      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
         title: Text(context.tr('ip_info.title')),
-        backgroundColor: AppTheme.primaryDark,
+        backgroundColor: const Color(0xFF0F0F23),
         elevation: 0,
         actions: [
           IconButton(
@@ -97,7 +97,19 @@ class _IpInfoScreenState extends State<IpInfoScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0F0F23),
+              Color(0xFF1A1A3A),
+            ],
+          ),
+        ),
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -131,7 +143,7 @@ class _IpInfoScreenState extends State<IpInfoScreen> {
             ElevatedButton(
               onPressed: _fetchIpInfo,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
+                backgroundColor: const Color(0xFF00D4AA),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
@@ -174,7 +186,7 @@ class _IpInfoScreenState extends State<IpInfoScreen> {
 
   Widget _buildSummaryCard() {
     return Card(
-      color: AppTheme.cardDark,
+      color: const Color(0xFF2A2A4A),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -211,7 +223,7 @@ class _IpInfoScreenState extends State<IpInfoScreen> {
 
   Widget _buildLocationCard() {
     return Card(
-      color: AppTheme.cardDark,
+      color: const Color(0xFF2A2A4A),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -269,7 +281,7 @@ class _IpInfoScreenState extends State<IpInfoScreen> {
 
   Widget _buildNetworkCard() {
     return Card(
-      color: AppTheme.cardDark,
+      color: const Color(0xFF2A2A4A),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(

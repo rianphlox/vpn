@@ -177,7 +177,7 @@ class _SubscriptionManagementScreenState
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.secondaryDark,
+            backgroundColor: const Color(0xFF2A2A4A),
             title: Text(
               context.tr(
                 TranslationKeys.subscriptionManagementDuplicateNameTitle,
@@ -194,7 +194,7 @@ class _SubscriptionManagementScreenState
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   context.tr(TranslationKeys.commonOk),
-                  style: const TextStyle(color: AppTheme.primaryBlue),
+                  style: const TextStyle(color: Color(0xFF00D4AA)),
                 ),
               ),
             ],
@@ -214,7 +214,7 @@ class _SubscriptionManagementScreenState
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.secondaryDark,
+            backgroundColor: const Color(0xFF2A2A4A),
             title: Text(
               context.tr(
                 TranslationKeys.subscriptionManagementDuplicateNameTitle,
@@ -231,7 +231,7 @@ class _SubscriptionManagementScreenState
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   context.tr(TranslationKeys.commonOk),
-                  style: const TextStyle(color: AppTheme.primaryBlue),
+                  style: const TextStyle(color: Color(0xFF00D4AA)),
                 ),
               ),
             ],
@@ -343,7 +343,7 @@ class _SubscriptionManagementScreenState
         await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.secondaryDark,
+            backgroundColor: const Color(0xFF2A2A4A),
             title: Text(
               context.tr(
                 TranslationKeys.subscriptionManagementDeleteSubscription,
@@ -360,7 +360,7 @@ class _SubscriptionManagementScreenState
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
                   context.tr(TranslationKeys.commonCancel),
-                  style: const TextStyle(color: AppTheme.primaryBlue),
+                  style: const TextStyle(color: Color(0xFF00D4AA)),
                 ),
               ),
               TextButton(
@@ -413,7 +413,7 @@ class _SubscriptionManagementScreenState
         await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.secondaryDark,
+            backgroundColor: const Color(0xFF2A2A4A),
             title: Text(
               context.tr(
                 TranslationKeys.subscriptionManagementResetDefaultUrlTitle,
@@ -430,14 +430,14 @@ class _SubscriptionManagementScreenState
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
                   context.tr(TranslationKeys.commonCancel),
-                  style: const TextStyle(color: AppTheme.primaryBlue),
+                  style: const TextStyle(color: Color(0xFF00D4AA)),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
                 child: Text(
                   context.tr(TranslationKeys.commonOk),
-                  style: const TextStyle(color: AppTheme.primaryBlue),
+                  style: const TextStyle(color: Color(0xFF00D4AA)),
                 ),
               ),
             ],
@@ -526,12 +526,12 @@ class _SubscriptionManagementScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
+      backgroundColor: const Color(0xFF0F0F23),
       appBar: AppBar(
         title: Text(
           context.tr(TranslationKeys.subscriptionManagementManageSubs),
         ),
-        backgroundColor: AppTheme.primaryDark,
+        backgroundColor: const Color(0xFF0F0F23),
         elevation: 0,
         actions: [
           IconButton(
@@ -548,17 +548,28 @@ class _SubscriptionManagementScreenState
           ),
         ],
       ),
-      body: Consumer<V2RayProvider>(
-        builder: (context, provider, _) {
-          final subscriptions = provider.subscriptions;
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0F0F23),
+              Color(0xFF1A1A3A),
+            ],
+          ),
+        ),
+        child: Consumer<V2RayProvider>(
+          builder: (context, provider, _) {
+            final subscriptions = provider.subscriptions;
 
-          return Column(
+            return Column(
             children: [
               // Add/Edit Subscription Form
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Card(
-                  color: AppTheme.cardDark,
+                  color: const Color(0xFF2A2A4A),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -594,7 +605,7 @@ class _SubscriptionManagementScreenState
                             ),
                             border: const OutlineInputBorder(),
                             filled: true,
-                            fillColor: AppTheme.secondaryDark,
+                            fillColor: const Color(0xFF2A2A4A),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -606,7 +617,7 @@ class _SubscriptionManagementScreenState
                             ),
                             border: const OutlineInputBorder(),
                             filled: true,
-                            fillColor: AppTheme.secondaryDark,
+                            fillColor: const Color(0xFF2A2A4A),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -634,7 +645,7 @@ class _SubscriptionManagementScreenState
                                       .subscriptionManagementImportFromFile,
                                 ),
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.blue),
+                                style: const TextStyle(color: Color(0xFF00D4AA)),
                               ),
                             ),
                           ],
@@ -658,7 +669,7 @@ class _SubscriptionManagementScreenState
                               onPressed: () =>
                                   _addOrUpdateSubscription(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryBlue,
+                                backgroundColor: const Color(0xFF00D4AA),
                               ),
                               child: Text(
                                 _isUpdating
@@ -701,7 +712,7 @@ class _SubscriptionManagementScreenState
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
-                            color: AppTheme.cardDark,
+                            color: const Color(0xFF2A2A4A),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -737,7 +748,7 @@ class _SubscriptionManagementScreenState
                                   IconButton(
                                     icon: const Icon(
                                       Icons.edit,
-                                      color: Colors.blue,
+                                      color: const Color(0xFF00D4AA),
                                     ),
                                     onPressed: () =>
                                         _prepareForUpdate(subscription),
@@ -800,8 +811,9 @@ class _SubscriptionManagementScreenState
                       ),
               ),
             ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -828,7 +840,7 @@ class _SubscriptionManagementScreenState
         backgroundColor: AppTheme.secondaryDark,
         title: Row(
           children: [
-            const Icon(Icons.help_outline, color: AppTheme.primaryBlue),
+            const Icon(Icons.help_outline, color: Color(0xFF00D4AA)),
             const SizedBox(width: 10),
             Text(context.tr(TranslationKeys.subscriptionManagementHowToAdd)),
           ],
@@ -854,7 +866,7 @@ class _SubscriptionManagementScreenState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryDark,
+                  color: const Color(0xFF0F0F23),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -884,7 +896,7 @@ class _SubscriptionManagementScreenState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryDark,
+                  color: const Color(0xFF0F0F23),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Column(
