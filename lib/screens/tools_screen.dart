@@ -82,7 +82,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
-                        childAspectRatio: 1.1,
+                        childAspectRatio: 0.95,
                         children: [
                           // Language option commented out as requested
                           // _buildModernToolCard(
@@ -216,7 +216,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -233,7 +233,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                   size: 28,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 title,
                 style: const TextStyle(
@@ -243,7 +243,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 description,
                 style: TextStyle(

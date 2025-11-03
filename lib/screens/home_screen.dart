@@ -168,13 +168,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const SubscriptionManagementScreen(),
                       ),
                     );
+                    // Check if configs were added and update onboarding state
+                    if (mounted) {
+                      final provider = Provider.of<V2RayProvider>(context, listen: false);
+                      if (provider.configs.isNotEmpty) {
+                        setState(() {
+                          _showOnboarding = false;
+                        });
+                      }
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00D4AA),
@@ -333,8 +342,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          (isConnected ? Colors.green : Colors.cyan).withOpacity(0.3),
-                          (isConnected ? Colors.green : Colors.cyan).withOpacity(0.1),
+                          (isConnected ? Colors.green : Colors.cyan).withValues(alpha: 0.3),
+                          (isConnected ? Colors.green : Colors.cyan).withValues(alpha: 0.1),
                           Colors.transparent,
                         ],
                       ),
