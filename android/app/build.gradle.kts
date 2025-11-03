@@ -7,6 +7,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Load signing properties
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        load(FileInputStream(keystorePropertiesFile))
+    }
+}
+
 android {
     namespace = "com.qubators.qshield"
     compileSdk = flutter.compileSdkVersion
@@ -42,10 +50,20 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
+            keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
+            storeFile = file(keystoreProperties["storeFile"] as String? ?: "")
+            storePassword = keystoreProperties["storePassword"] as String? ?: ""
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
             isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
