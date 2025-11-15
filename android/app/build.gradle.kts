@@ -42,6 +42,14 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    // Fix for Android R+ (API 30+) resources.arsc compression issue
+    androidResources {
+        noCompress += listOf("resources.arsc")
     }
 
     splits {
